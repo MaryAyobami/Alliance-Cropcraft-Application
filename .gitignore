@@ -1,5 +1,4 @@
-/android
-/node_modules
-/server/.env
-/server
-/ios
+android/
+node_modules/
+server/
+ios/
