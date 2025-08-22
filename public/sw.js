@@ -6,8 +6,11 @@ self.addEventListener('activate', event => {
   self.clients.claim()
 })
 
-// Simple offline cache (optional)
 self.addEventListener('fetch', event => {
+  // Only cache http(s) requests
+  if (!event.request.url.startsWith('http')) {
+    return
+  }
   event.respondWith(
     caches.open('livestock-cache').then(cache => {
       return cache.match(event.request).then(response => {
