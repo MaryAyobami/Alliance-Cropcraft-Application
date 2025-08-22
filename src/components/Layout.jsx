@@ -12,114 +12,101 @@ import {
   LogOut,
   Bell,
 } from "lucide-react"
+import { useState } from "react"
 
 const Layout = ({ children }) => {
+  const navigate = useNavigate();
   const { user, logout } = useAuth()
   const location = useLocation()
-  const navigate = useNavigate()
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const handleLogout = () => {
-    logout()
-    navigate("/login")
-  }
+    logout();
+    navigate("/login");
+  };
 
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Tasks", href: "/tasks", icon: CheckSquare },
     { name: "Calendar", href: "/calendar", icon: Calendar },
     { name: "Reports", href: "/reports", icon: BarChart3 },
-  ]
-
-  // Add admin-only navigation items
-  if (user?.role === "Admin User") {
-    navigation.push(
-      { name: "Manage Users", href: "/manage-users", icon: Users },
-      { name: "Add User", href: "/add-user", icon: UserPlus },
-      { name: "Settings", href: "/settings", icon: Settings },
-    )
-  }
-
-    const CompanyLogo = () => (
-    <div className="relative inline-block">
-      <svg width="40" height="50" viewBox="0 0 80 80" className="animate-logo-glow">
-        {/* Circular background with gradient */}
-        <defs>
-          <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#10b981" />
-            <stop offset="50%" stopColor="#059669" />
-            <stop offset="100%" stopColor="#047857" />
-          </linearGradient>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-            <feMerge> 
-              <feMergeNode in="coloredBlur"/>
-              <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          </filter>
-        </defs>
-        
-        {/* Background circle */}
-        <circle cx="40" cy="40" r="38" fill="url(#logoGradient)" filter="url(#glow)" />
-        
-        {/* Wheat stalks */}
-        <g fill="white" transform="translate(20, 15)">
-          {/* Left wheat stalk */}
-          <path d="M8 45 L10 20 Q10 18 12 18 Q14 18 14 20 L16 45" stroke="white" strokeWidth="2" fill="none"/>
-          <ellipse cx="12" cy="20" rx="3" ry="2" />
-          <ellipse cx="12" cy="24" rx="2.5" ry="1.5" />
-          <ellipse cx="12" cy="28" rx="2" ry="1" />
-          
-          {/* Center wheat stalk */}
-          <path d="M18 50 L20 15 Q20 13 22 13 Q24 13 24 15 L26 50" stroke="white" strokeWidth="2" fill="none"/>
-          <ellipse cx="22" cy="15" rx="3.5" ry="2.5" />
-          <ellipse cx="22" cy="19" rx="3" ry="2" />
-          <ellipse cx="22" cy="23" rx="2.5" ry="1.5" />
-          <ellipse cx="22" cy="27" rx="2" ry="1" />
-          
-          {/* Right wheat stalk */}
-          <path d="M28 45 L30 20 Q30 18 32 18 Q34 18 34 20 L36 45" stroke="white" strokeWidth="2" fill="none"/>
-          <ellipse cx="32" cy="20" rx="3" ry="2" />
-          <ellipse cx="32" cy="24" rx="2.5" ry="1.5" />
-          <ellipse cx="32" cy="28" rx="2" ry="1" />
-        </g>
-        
-        {/* Small leaves */}
-        <g fill="#dcfce7">
-          <ellipse cx="25" cy="35" rx="4" ry="2" transform="rotate(-30 25 35)" />
-          <ellipse cx="55" cy="35" rx="4" ry="2" transform="rotate(30 55 35)" />
-        </g>
-      </svg>
-    </div>
-  )
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <div className="w-64 bg-white shadow-sm border-r border-gray-200 flex flex-col">
-        {/* Logo */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <CompanyLogo />
-            <div>
-              <h1 className="font-bold text-lg text-gray-900">Alliance CropCraft</h1>
-              {/* <p className="text-sm text-primary-700">Limited</p> */}
+    <div className="min-h-screen bg-gray-50 relative overflow-hidden">
+      {/* Animated background circles */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <svg width="100%" height="100%" className="absolute top-0 left-0 animate-fade-in" style={{zIndex:0}}>
+          <circle cx="10%" cy="10%" r="80" fill="#d1fae5" opacity="0.3">
+            <animate attributeName="r" values="80;100;80" dur="6s" repeatCount="indefinite" />
+          </circle>
+          <circle cx="80%" cy="20%" r="60" fill="#a7f3d0" opacity="0.2">
+            <animate attributeName="r" values="60;80;60" dur="7s" repeatCount="indefinite" />
+          </circle>
+          <circle cx="50%" cy="80%" r="100" fill="#f0abfc" opacity="0.15">
+            <animate attributeName="r" values="100;120;100" dur="8s" repeatCount="indefinite" />
+          </circle>
+        </svg>
+      </div>
+
+      {/* Top Navigation Bar */}
+      <nav className="relative z-10 w-full bg-white shadow-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between lg:hidden">
+        <div className="flex items-center gap-3">
+          {/* <CompanyLogo /> */}
+          <span className="font-bold text-lg text-gray-900">Alliance CropCraft</span>
+        </div>
+        <div className="flex items-center gap-4">
+          {/* Hamburger for mobile */}
+          <button className="lg:hidden p-2 rounded-md text-gray-600 hover:bg-gray-100" onClick={() => setMenuOpen(!menuOpen)}>
+            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+          {/* User/Logout/Notifications */}
+          <div className="flex items-center gap-3">
+            <button className="relative p-2 text-gray-400 hover:text-gray-600">
+              <Bell className="w-5 h-5" />
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
+            </button>
+            <div className="hidden sm:flex items-center gap-2">
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-900">{user?.full_name}</p>
+                <p className="text-xs text-primary-600">{user?.role}</p>
+              </div>
+              <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center">
+                <span className="text-white text-sm font-medium">
+                  {user?.full_name?.split(" ").map((n) => n[0]).join("").toUpperCase()}
+                </span>
+              </div>
+              <button onClick={handleLogout} className="p-2 text-gray-400 hover:text-gray-600">
+                <LogOut className="w-5 h-5" />
+              </button>
             </div>
           </div>
         </div>
+      </nav>
 
-        {/* Navigation */}
+      {/* Mobile menu overlay */}
+      {menuOpen && (
+        <div className="fixed inset-0 z-20 bg-black bg-opacity-30" onClick={() => setMenuOpen(false)}></div>
+      )}
+      <div className={`fixed top-0 left-0 z-30 w-64 h-full bg-white shadow-lg transform ${menuOpen ? "translate-x-0" : "-translate-x-full"} transition-transform duration-300 lg:hidden`}>
+        <div className="p-6 border-b border-gray-200 flex items-center gap-3">
+          {/* <CompanyLogo /> */}
+          <span className="font-bold text-lg text-gray-900">Alliance CropCraft</span>
+        </div>
         <nav className="flex-1 p-4 space-y-2">
           {navigation.map((item) => {
             const Icon = item.icon
             const isActive = location.pathname === item.href
-
             return (
               <Link
                 key={item.name}
                 to={item.href}
-                className={`flex items-center space-x-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
-                  isActive ? "bg-primary-600 text-white" : "text-gray-700 hover:bg-gray-100"
-                }`}
+                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${isActive ? "bg-primary-600 text-white" : "text-gray-700 hover:bg-gray-100"}`}
+                onClick={() => setMenuOpen(false)}
               >
                 <Icon className="w-5 h-5" />
                 <span>{item.name}</span>
@@ -127,54 +114,66 @@ const Layout = ({ children }) => {
             )
           })}
         </nav>
+        <div className="p-4 border-t border-gray-200 flex items-center gap-2">
+          <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center">
+            <span className="text-white text-sm font-medium">
+              {user?.full_name?.split(" ").map((n) => n[0]).join("").toUpperCase()}
+            </span>
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-gray-900">{user?.full_name}</p>
+            <p className="text-xs text-primary-600">{user?.role}</p>
+          </div>
+          <button onClick={handleLogout} className="p-2 text-gray-400 hover:text-gray-600">
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 capitalize">
-                {location.pathname.replace("/", "") || "Dashboard"}
-              </h2>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <button className="relative p-2 text-gray-400 hover:text-gray-600">
-                <Bell className="w-5 h-5" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                  3
-                </span>
-              </button>
-
-              <div className="flex items-center space-x-3">
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">{user?.full_name}</p>
-                  <p className="text-xs text-primary-600">{user?.role}</p>
-                </div>
-                <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">
-                    {user?.full_name
-                      ?.split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .toUpperCase()}
-                  </span>
-                </div>
-                <button onClick={handleLogout} className="p-2 text-gray-400 hover:text-gray-600">
-                  <LogOut className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
+      {/* Main content with sidebar for desktop */}
+      <div className="relative z-10 flex flex-col lg:flex-row">
+        {/* Sidebar for desktop */}
+        <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:min-h-screen bg-white shadow-lg border-r border-gray-200 z-20">
+          <div className="p-6 border-b border-gray-200 flex items-center gap-3">
+            {/* <CompanyLogo /> */}
+            <span className="font-bold text-lg text-gray-900">Alliance CropCraft</span>
           </div>
-        </header>
-
-        {/* Page content */}
-        <main className="flex-1 p-6">{children}</main>
+          <nav className="flex-1 p-4 space-y-2">
+            {navigation.map((item) => {
+              const Icon = item.icon
+              const isActive = location.pathname === item.href
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${isActive ? "bg-primary-600 text-white" : "text-gray-700 hover:bg-gray-100"}`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span>{item.name}</span>
+                </Link>
+              )
+            })}
+          </nav>
+          <div className="p-4 border-t border-gray-200 flex items-center gap-2">
+            <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center">
+              <span className="text-white text-sm font-medium">
+                {user?.full_name?.split(" ").map((n) => n[0]).join("").toUpperCase()}
+              </span>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-900">{user?.full_name}</p>
+              <p className="text-xs text-primary-600">{user?.role}</p>
+            </div>
+            <button onClick={handleLogout} className="p-2 text-gray-400 hover:text-gray-600">
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
+        </aside>
+        {/* Main content area */}
+        <main className="flex-1 p-2 sm:p-6">{children}</main>
       </div>
     </div>
-  )
+  );
 }
 
-export default Layout
+export default Layout;

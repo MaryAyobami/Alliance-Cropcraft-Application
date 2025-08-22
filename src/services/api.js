@@ -39,6 +39,8 @@ export const tasksAPI = {
   getTasks: () => api.get("/tasks"),
   completeTask: (taskId) => api.put(`/tasks/${taskId}/complete`),
   createTask: (taskData) => api.post("/tasks", taskData),
+  completeTaskWithEvidence: (taskData) =>
+    api.post(`/tasks/${taskData.get('taskId')}/complete-with-evidence`, taskData),
 }
 
 // Events API

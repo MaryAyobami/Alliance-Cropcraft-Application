@@ -17,6 +17,8 @@ const Register = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [acceptTerms, setAcceptTerms] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const { login } = useAuth()
   const navigate = useNavigate()
@@ -115,9 +117,9 @@ const Register = () => {
   )
 
   return (
-    <div className="min-h-screen flex relative overflow-hidden">
-      {/* Left Side - Green Farm Image */}
-      <div className="hidden lg:flex lg:w-3/5 relative overflow-hidden min-h-screen">
+    <div className="min-h-screen flex flex-col lg:flex-row relative">
+      {/* Left Side - Green Farm Image - Fixed Height */}
+      <div className="hidden lg:flex lg:w-3/5 relative overflow-hidden h-screen sticky top-0">
         {/* Green Farm Background Image */}
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat transform scale-105 transition-transform duration-700 hover:scale-100"
@@ -141,16 +143,13 @@ const Register = () => {
         </div>
 
         {/* Main Content - Bottom */}
-        <div className="relative z-10 flex flex-col justify-end p-12 text-white">
+  <div className="relative z-10 flex flex-col justify-end p-6 lg:p-12 text-white">
           <div className="max-w-lg animate-slide-up">
             <div className="mb-6">
               <div className="w-16 h-1 bg-primary-700 mb-4 animate-expand"></div>
-              <h1 className="text-5xl font-bold mb-3 leading-tight">
-                Create an Acccount
+              <h1 className="text-3xl lg:text-5xl font-bold mb-3 leading-tight">
+                Create an Account
               </h1>
-              {/* <h2 className="text-2xl font-light opacity-90 mb-6">
-                Start your agricultural journey today
-              </h2> */}
             </div>
             
             <div className="space-y-3 animate-slide-up delay-300">
@@ -178,7 +177,7 @@ const Register = () => {
       </div>
 
       {/* Right Side - Enhanced Registration Form */}
-      <div className="w-full lg:w-2/5 relative overflow-hidden">
+      <div className="w-full lg:w-2/5 relative overflow-hidden min-h-screen">
         {/* Animated Background with circles and animal stickers */}
         <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-primary-50">
           {/* Circle 1 with Cow */}
@@ -300,7 +299,6 @@ const Register = () => {
                     <CompanyLogo />
                 </div>
                 <h2 className="text-3xl font-bold text-gray-900 animate-slide-down mb-2">Create Account</h2>
-                {/* <p className="text-primary-600 font-medium animate-slide-down delay-200">Join the farming revolution</p> */}
               </div>
 
               {error && (
@@ -411,14 +409,29 @@ const Register = () => {
                     <input
                       id="password"
                       name="password"
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       required
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 hover:border-primary-300 bg-white/70 backdrop-blur-sm text-gray-900 placeholder-gray-500"
+                      className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 hover:border-primary-300 bg-white/70 backdrop-blur-sm text-gray-900 placeholder-gray-500"
                       placeholder="Create a strong password"
                       value={formData.password}
                       onChange={handleChange}
                     />
-                  
+                    <button
+                      type="button"
+                      className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
                   </div>
                 </div>
 
@@ -431,14 +444,29 @@ const Register = () => {
                     <input
                       id="confirmPassword"
                       name="confirmPassword"
-                      type="password"
+                      type={showConfirmPassword ? "text" : "password"}
                       required
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 hover:border-primary-300 bg-white/70 backdrop-blur-sm text-gray-900 placeholder-gray-500"
+                      className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 hover:border-primary-300 bg-white/70 backdrop-blur-sm text-gray-900 placeholder-gray-500"
                       placeholder="Confirm your password"
                       value={formData.confirmPassword}
                       onChange={handleChange}
                     />
-          
+                    <button
+                      type="button"
+                      className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
                   </div>
                 </div>
 
@@ -481,7 +509,6 @@ const Register = () => {
                     </span>
                   ) : (
                     <span className="flex items-center justify-center">
-                     
                       Create Account
                     </span>
                   )}
@@ -574,6 +601,7 @@ const Register = () => {
         .animate-logo-glow { animation: logo-glow 3s ease-in-out infinite; }
         .animate-shake { animation: shake 0.6s ease-in-out; }
         
+        .delay-100 { animation-delay: 0.1s; }
         .delay-200 { animation-delay: 0.2s; }
         .delay-300 { animation-delay: 0.3s; }
         .delay-400 { animation-delay: 0.4s; }
@@ -591,6 +619,8 @@ const Register = () => {
         .shadow-3xl {
           box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         }
+
+        /* Remove the margin-left override */
       `}</style>
     </div>
   )

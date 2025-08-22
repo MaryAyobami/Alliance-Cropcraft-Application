@@ -5,13 +5,15 @@ const CreateTaskForm = () => {
   const [users, setUsers] = useState([])
 
   const [formData, setFormData] = useState({
-  
     title: "",
     description: "",
     priority: "medium",
     assigned_to: "",
     due_date: "",
     due_time: "",
+    tag: "static",         // NEW: default to static
+    recurrent: true,       // NEW: default to true
+    active_date: ""        // NEW: for dynamic tasks
   })
 
   const [loading, setLoading] = useState(false)
@@ -33,10 +35,27 @@ const CreateTaskForm = () => {
   }, [])
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    })
+    const { name, value } = e.target
+    // If changing tag, set recurrent and active_date accordingly
+    if (name === "tag") {
+      setFormData({
+        ...formData,
+        tag: value,
+        recurrent: value === "static",
+        active_date: value === "dynamic" ? formData.due_date : ""
+      })
+    } else if (name === "due_date") {
+      setFormData({
+        ...formData,
+        due_date: value,
+        active_date: formData.tag === "dynamic" ? value : ""
+      })
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      })
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -113,6 +132,24 @@ const CreateTaskForm = () => {
           ))}
         </select>
       </div>
+    <div>
+        <label className="block text-sm">Task Type</label>
+        <select
+          name="tag"
+          value={formData.tag}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
+        >
+          <option value="static">Static (Daily/Recurrent)</option>
+          <option value="dynamic">Dynamic (One-time)</option>
+        </select>
+      </div>
+      {formData.tag === "static" && (
+          <div className="text-xs text-gray-500">This task will recur every day.</div>
+        )}
+        {formData.tag === "dynamic" && (
+          <div className="text-xs text-gray-500">This task will only be active on the selected date.</div>
+        )}
 
       <div className="flex gap-2">
         <div className="flex-1">

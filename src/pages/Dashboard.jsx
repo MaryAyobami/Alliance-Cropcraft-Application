@@ -3,12 +3,13 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "../contexts/AuthContext"
 import { dashboardAPI } from "../services/api"
-import { TrendingUp, Users, Calendar, CheckCircle, Clock, Sun, Sunset, Moon } from "lucide-react"
+import { TrendingUp, Users, Calendar, CheckCircle, Clock, Sun, Sunset, Moon, Cloud, CloudRain, Thermometer, MapPin } from "lucide-react"
 
 const Dashboard = () => {
   const { user } = useAuth()
   const [stats, setStats] = useState(null)
   const [tasks, setTasks] = useState({ morning: [], afternoon: [], evening: [] })
+  const [weather, setWeather] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -19,6 +20,7 @@ const Dashboard = () => {
 
         setStats(statsResponse.data)
         setTasks(tasksResponse.data)
+        console.log(statsResponse.data)
       } catch (error) {
         console.error("Error fetching dashboard data:", error)
       } finally {
@@ -26,66 +28,125 @@ const Dashboard = () => {
       }
     }
 
+    const fetchWeatherData = async () => {
+      try {
+        // Farm location in Ilorin, Oyo State, Nigeria
+        const farmLocation = {
+          lat: 8.4799,
+          lon: 4.5418,
+          name: "Alliance CropCraft Farm"
+        }
+        
+        const response = await fetch(
+          `https://api.openweathermap.org/data/2.5/weather?lat=${farmLocation.lat}&lon=${farmLocation.lon}&appid=YOUR_API_KEY&units=metric`
+        )
+        
+        if (response.ok) {
+          const data = await response.json()
+          setWeather({
+            temperature: Math.round(data.main.temp),
+            description: data.weather[0].description,
+            condition: data.weather[0].main,
+            humidity: data.main.humidity,
+            feelsLike: Math.round(data.main.feels_like),
+            location: farmLocation.name
+          })
+        } else {
+          throw new Error('Weather API request failed')
+        }
+      } catch (error) {
+        console.error("Error fetching weather data:", error)
+        setWeather({
+          temperature: 28,
+          description: "partly cloudy",
+          condition: "Clouds",
+          humidity: 75,
+          feelsLike: 31,
+          location: "Alliance CropCraft Farm"
+        })
+      }
+    }
+
     fetchDashboardData()
+    fetchWeatherData()
   }, [])
 
   const getPriorityColor = (priority) => {
     switch (priority) {
       case "high":
-        return "bg-red-100 text-red-800"
+        return "bg-red-100 text-red-700"
       case "medium":
-        return "bg-yellow-100 text-yellow-800"
+        return "bg-yellow-100 text-yellow-700"
       case "low":
-        return "bg-green-100 text-green-800"
+        return "bg-green-100 text-green-700"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 text-gray-700"
     }
+  }
+
+  const getWeatherIcon = (condition) => {
+    switch (condition?.toLowerCase()) {
+      case "clear":
+        return Sun
+      case "clouds":
+        return Cloud
+      case "rain":
+      case "drizzle":
+        return CloudRain
+      default:
+        return Sun
+    }
+  }
+
+  const getGreeting = () => {
+    const hour = new Date().getHours()
+    if (hour < 12) return "Good morning"
+    if (hour < 17) return "Good afternoon"
+    return "Good evening"
   }
 
   const TaskSection = ({ title, tasks, icon: Icon, color }) => (
     <div className="card">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
-          <div className={`w-10 h-10 ${color} rounded-xl flex items-center justify-center`}>
-            <Icon className="w-5 h-5 text-white" />
+          <div className={`w-12 h-12 ${color} rounded-xl flex items-center justify-center shadow-sm`}>
+            <Icon className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900">{title}</h3>
-            <p className="text-sm text-primary-600">
+            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+            <p className="text-sm text-gray-500">
               {tasks.filter((t) => t.status === "completed").length} of {tasks.length} completed
             </p>
           </div>
         </div>
       </div>
 
-      <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+      <div className="w-full bg-gray-100 rounded-full h-3 mb-6">
         <div
-          className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+          className={`h-3 rounded-full transition-all duration-500 ${color.replace('bg-', 'bg-').replace('-500', '-400')}`}
           style={{
             width: `${tasks.length > 0 ? (tasks.filter((t) => t.status === "completed").length / tasks.length) * 100 : 0}%`,
           }}
         ></div>
       </div>
 
-      <div className="space-y-3">
-        {tasks.slice(0, 3).map((task) => (
-          <div key={task.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-            <div className="flex items-center space-x-3">
+      <div className="space-y-4">
+        {tasks.slice(0, 4).map((task) => (
+          <div key={task.id} className="flex items-center justify-between group hover:bg-gray-50 -mx-2 px-2 py-2 rounded-lg transition-colors">
+            <div className="flex items-center space-x-3 flex-1 min-w-0">
               {task.status === "completed" ? (
-                <CheckCircle className="w-5 h-5 text-green-500" />
+                <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
               ) : (
-                <Clock className="w-5 h-5 text-gray-400" />
+                <Clock className="w-5 h-5 text-gray-400 flex-shrink-0" />
               )}
-              <div>
-                <p
-                  className={`font-medium ${task.status === "completed" ? "line-through text-gray-500" : "text-gray-900"}`}
-                >
+              <div className="min-w-0 flex-1">
+                <p className={`font-medium ${task.status === "completed" ? "line-through text-gray-500" : "text-gray-900"}`}>
                   {task.title}
                 </p>
-                <p className="text-sm text-gray-500">{task.due_time}</p>
+                <p className="text-sm text-gray-500 mt-1">{task.due_time}</p>
               </div>
             </div>
-            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(task.priority)}`}>
+            <span className={`px-3 py-1 text-xs font-medium rounded-full ${getPriorityColor(task.priority)} ml-3 flex-shrink-0`}>
               {task.priority}
             </span>
           </div>
@@ -102,55 +163,96 @@ const Dashboard = () => {
     )
   }
 
+  const WeatherIcon = weather ? getWeatherIcon(weather.condition) : Sun
+
   return (
-    <div className="space-y-6">
-      {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl p-6 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Good morning, {user?.full_name}!</h1>
-            <p className="text-primary-100 mt-1">You have {stats?.pendingTasks || 0} pending tasks today</p>
-          </div>
-          <div className="text-right">
-            <div className="text-3xl font-bold">{stats?.completedTasks || "0/0"}</div>
-            <p className="text-primary-100">Tasks Completed</p>
+    <div className="space-y-8 max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-6">
+      {/* Hero Section with Weather Integration */}
+  <div className="relative bg-gradient-to-br from-primary-700 via-primary-600 to-primary-500 rounded-2xl p-4 sm:p-8 text-white overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 bg-black bg-opacity-10">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `radial-gradient(circle at 25% 25%, rgba(255,255,255,0.1) 0%, transparent 50%), 
+                             radial-gradient(circle at 75% 75%, rgba(255,255,255,0.1) 0%, transparent 50%)`
+          }}></div>
+        </div>
+
+        <div className="relative z-10">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-0">
+            {/* Welcome Section */}
+            <div className="flex-1">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">
+                {getGreeting()}, {user?.full_name}!
+              </h1>
+              <p className="text-white text-base sm:text-lg mb-4">
+                You have {stats?.pendingTasks || 0} pending tasks today
+              </p>
+              <div className="flex flex-wrap items-center gap-4 sm:gap-8">
+                <div>
+                  <div className="text-3xl font-bold">{stats?.completedTasks || "0/0"}</div>
+                  <p className="text-white text-sm">Tasks Completed</p>
+                </div>
+                <div className="hidden sm:block h-12 w-px bg-blue-300 opacity-50"></div>
+                <div>
+                  <div className="text-3xl font-bold">{stats?.completionRate || 0}%</div>
+                  <p className="text-white text-sm">Success Rate</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Weather Section */}
+            {weather && (
+              <div className="lg:text-right">
+                <div className="flex flex-row items-center gap-4 lg:flex-col lg:items-end lg:gap-0 lg:space-y-2">
+                  <WeatherIcon className="w-16 h-16 text-white opacity-90" />
+                  <div>
+                    <div className="text-2xl sm:text-4xl font-bold">{weather.temperature}°C</div>
+                    <p className="text-white capitalize text-lg">{weather.description}</p>
+                    <div className="flex items-center justify-end space-x-1 mt-2 text-white">
+                      <MapPin className="w-4 h-4" />
+                      <span className="text-sm">{weather.location}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="card">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-blue-600" />
+      {/* Stats Overview */}
+  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
+        <div className="card group hover:shadow-lg transition-all duration-300">
+          <div className="flex items-center space-x-4">
+            <div className="w-14 h-14 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+              <TrendingUp className="w-7 h-7 text-white" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">Completion Rate</p>
+              <p className="text-sm font-medium text-gray-500 mb-1">Completion Rate</p>
               <p className="text-2xl font-bold text-gray-900">{stats?.completionRate || 0}%</p>
             </div>
           </div>
         </div>
 
-        <div className="card">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-              <Users className="w-6 h-6 text-purple-600" />
+        <div className="card group hover:shadow-lg transition-all duration-300">
+          <div className="flex items-center space-x-4">
+            <div className="w-14 h-14 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+              <Users className="w-7 h-7 text-white" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">Active Staff</p>
+              <p className="text-sm font-medium text-gray-500 mb-1">Active Staff</p>
               <p className="text-2xl font-bold text-gray-900">{stats?.activeStaff || 0}</p>
             </div>
           </div>
         </div>
 
-        <div className="card">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-orange-600" />
+        <div className="card group hover:shadow-lg transition-all duration-300">
+          <div className="flex items-center space-x-4">
+            <div className="w-14 h-14 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+              <Calendar className="w-7 h-7 text-white" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">This Week</p>
+              <p className="text-sm font-medium text-gray-500 mb-1">This Week</p>
               <p className="text-2xl font-bold text-gray-900">{stats?.thisWeekTasks || 0} Tasks</p>
             </div>
           </div>
@@ -159,14 +261,34 @@ const Dashboard = () => {
 
       {/* Today's Schedule */}
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-6">Today's Schedule</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-2">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Today's Schedule</h2>
+          <div className="text-xs sm:text-sm text-gray-500">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </div>
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <TaskSection title="Morning Tasks" tasks={tasks.morning} icon={Sun} color="bg-orange-500" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
+          <TaskSection 
+            title="Morning Tasks" 
+            tasks={tasks.morning} 
+            icon={Sun} 
+            color="bg-gradient-to-br from-amber-400 to-orange-500" 
+          />
 
-          <TaskSection title="Afternoon Tasks" tasks={tasks.afternoon} icon={Sunset} color="bg-red-500" />
+          <TaskSection 
+            title="Afternoon Tasks" 
+            tasks={tasks.afternoon} 
+            icon={Sunset} 
+            color="bg-gradient-to-br from-red-400 to-pink-500" 
+          />
 
-          <TaskSection title="Evening Tasks" tasks={tasks.evening} icon={Moon} color="bg-purple-500" />
+          <TaskSection 
+            title="Evening Tasks" 
+            tasks={tasks.evening} 
+            icon={Moon} 
+            color="bg-gradient-to-br from-indigo-400 to-purple-500" 
+          />
         </div>
       </div>
     </div>

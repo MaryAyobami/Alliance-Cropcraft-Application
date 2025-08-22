@@ -125,15 +125,15 @@ const Calendar = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Calendar</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Calendar</h1>
           <p className="text-gray-600 mt-1">Schedule and manage farm tasks and events</p>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <select className="border border-gray-300 rounded-xl px-3 py-2 text-sm">
             <option>All</option>
           </select>
@@ -144,7 +144,7 @@ const Calendar = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {/* Calendar */}
         <div className="lg:col-span-3">
           <div className="card">
