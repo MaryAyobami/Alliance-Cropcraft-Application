@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard"
 import Tasks from "./pages/Tasks"
 import Calendar from "./pages/Calendar"
 import Reports from "./pages/Reports"
+import PWAInstallPrompt from "./components/PWAInstallPrompt"
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth()
@@ -46,7 +47,10 @@ function App() {
             path="/login"
             element={
               <PublicRoute>
-                <Login />
+                  <>
+                  <PWAInstallPrompt />
+                  <Login />
+                </>
               </PublicRoute>
             }
           />
@@ -63,6 +67,7 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
+                  <PWAInstallPrompt />
                   <Dashboard />
                 </Layout>
               </ProtectedRoute>
