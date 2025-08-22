@@ -9,6 +9,7 @@ import Tasks from "./pages/Tasks"
 import Calendar from "./pages/Calendar"
 import Reports from "./pages/Reports"
 import PWAInstallPrompt from "./components/PWAInstallPrompt"
+import Settings from "./pages/Settings"
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth()
@@ -89,6 +90,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Calendar />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Settings/>
                 </Layout>
               </ProtectedRoute>
             }

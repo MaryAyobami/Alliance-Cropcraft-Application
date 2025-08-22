@@ -75,7 +75,7 @@ const Layout = ({ children }) => {
                 <p className="text-sm font-medium text-gray-900">{user?.full_name}</p>
                 <p className="text-xs text-primary-600">{user?.role}</p>
               </div>
-              <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center">
+              <div className=" cursor-pointer w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm font-medium">
                   {user?.full_name?.split(" ").map((n) => n[0]).join("").toUpperCase()}
                 </span>
@@ -120,7 +120,7 @@ const Layout = ({ children }) => {
               {user?.full_name?.split(" ").map((n) => n[0]).join("").toUpperCase()}
             </span>
           </div>
-          <div className="flex-1">
+          <div onClick={()=>navigate('/profile')} className="flex-1 pointer-cursor">
             <p className="text-sm font-medium text-gray-900">{user?.full_name}</p>
             <p className="text-xs text-primary-600">{user?.role}</p>
           </div>
@@ -160,7 +160,7 @@ const Layout = ({ children }) => {
                 {user?.full_name?.split(" ").map((n) => n[0]).join("").toUpperCase()}
               </span>
             </div>
-            <div className="flex-1">
+            <div onClick={()=>navigate('/profile')} className="flex-1 cursor-pointer">
               <p className="text-sm font-medium text-gray-900">{user?.full_name}</p>
               <p className="text-xs text-primary-600">{user?.role}</p>
             </div>
