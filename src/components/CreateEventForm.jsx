@@ -1,18 +1,15 @@
-import { useEffect, useState } from "react"
-import { tasksAPI, userAPI } from "../services/api"
+import { useState } from "react"
+import { eventsAPI } from "../services/api"
 
-const CreateTaskForm = ({ onTaskCreated, onCancel }) => {
-  const [users, setUsers] = useState([])
+const CreateEventForm = ({ onEventCreated, onCancel }) => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    priority: "medium",
-    assigned_to: "",
-    due_date: "",
-    due_time: "",
-    tag: "static",         
-    recurrent: true,       
-    active_date: ""        
+    event_date: "",
+    event_time: "",
+    location: "",
+    type: "meeting",
+    priority: "medium"
   })
 
   const [loading, setLoading] = useState(false)
@@ -20,41 +17,24 @@ const CreateTaskForm = ({ onTaskCreated, onCancel }) => {
   const [fieldErrors, setFieldErrors] = useState({})
   const [success, setSuccess] = useState("")
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const res = await userAPI.getUsers()
-        setUsers(res.data)
-      } catch (err) {
-        setError("Failed to load users. Please refresh the page.")
-        console.error("Failed to fetch users:", err)
-      }
-    }
-    fetchUsers()
-  }, [])
-
   const validateForm = () => {
     const errors = {}
     
     if (!formData.title.trim()) {
-      errors.title = "Task title is required"
+      errors.title = "Event title is required"
     } else if (formData.title.length > 100) {
       errors.title = "Title must be less than 100 characters"
     }
     
-    if (!formData.assigned_to) {
-      errors.assigned_to = "Please assign the task to someone"
-    }
-    
-    if (!formData.due_date) {
-      errors.due_date = "Due date is required"
+    if (!formData.event_date) {
+      errors.event_date = "Event date is required"
     } else {
-      const selectedDate = new Date(formData.due_date)
+      const selectedDate = new Date(formData.event_date)
       const today = new Date()
       today.setHours(0, 0, 0, 0)
       
       if (selectedDate < today) {
-        errors.due_date = "Due date cannot be in the past"
+        errors.event_date = "Event date cannot be in the past"
       }
     }
     
@@ -74,26 +54,10 @@ const CreateTaskForm = ({ onTaskCreated, onCancel }) => {
       setFieldErrors({ ...fieldErrors, [name]: "" })
     }
     
-    // If changing tag, set recurrent and active_date accordingly
-    if (name === "tag") {
-      setFormData({
-        ...formData,
-        tag: value,
-        recurrent: value === "static",
-        active_date: value === "dynamic" ? formData.due_date : ""
-      })
-    } else if (name === "due_date") {
-      setFormData({
-        ...formData,
-        due_date: value,
-        active_date: formData.tag === "dynamic" ? value : ""
-      })
-    } else {
-      setFormData({
-        ...formData,
-        [name]: value,
-      })
-    }
+    setFormData({
+      ...formData,
+      [name]: value,
+    })
   }
 
   const handleSubmit = async (e) => {
@@ -110,32 +74,30 @@ const CreateTaskForm = ({ onTaskCreated, onCancel }) => {
     }
 
     try {
-      const response = await tasksAPI.createTask(formData)
-      setSuccess("Task created successfully!")
+      const response = await eventsAPI.createEvent(formData)
+      setSuccess("Event created successfully!")
       
       // Reset form
       setFormData({
         title: "",
         description: "",
-        priority: "medium",
-        assigned_to: "",
-        due_date: "",
-        due_time: "",
-        tag: "static",
-        recurrent: true,
-        active_date: ""
+        event_date: "",
+        event_time: "",
+        location: "",
+        type: "meeting",
+        priority: "medium"
       })
       
       // Call parent callback if provided
-      if (onTaskCreated) {
-        onTaskCreated(response.data)
+      if (onEventCreated) {
+        onEventCreated(response.data)
       }
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(""), 3000)
       
     } catch (err) {
-      console.error("Task creation error:", err)
+      console.error("Event creation error:", err)
       const errorData = err.response?.data
       
       if (errorData?.field) {
@@ -146,7 +108,7 @@ const CreateTaskForm = ({ onTaskCreated, onCancel }) => {
       } else if (err.code === 'ERR_NETWORK') {
         setError("Network error. Please check your connection and try again.")
       } else {
-        setError("Failed to create task. Please try again.")
+        setError("Failed to create event. Please try again.")
       }
     } finally {
       setLoading(false)
@@ -164,7 +126,7 @@ const CreateTaskForm = ({ onTaskCreated, onCancel }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto px-1">
       <div className="flex items-center justify-between sticky top-0 bg-white pt-2 pb-4 z-10">
-        <h2 className="text-xl font-semibold text-gray-900">Create New Task</h2>
+        <h2 className="text-xl font-semibold text-gray-900">Create New Event</h2>
         {onCancel && (
           <button
             type="button"
@@ -199,7 +161,7 @@ const CreateTaskForm = ({ onTaskCreated, onCancel }) => {
           onChange={handleChange}
           maxLength={100}
           className={getFieldClassName('title')}
-          placeholder="Enter task title"
+          placeholder="Enter event title"
         />
         {fieldErrors.title && (
           <p className="text-red-500 text-xs mt-1">{fieldErrors.title}</p>
@@ -215,7 +177,7 @@ const CreateTaskForm = ({ onTaskCreated, onCancel }) => {
           maxLength={500}
           rows={3}
           className={getFieldClassName('description')}
-          placeholder="Enter task description (optional)"
+          placeholder="Enter event description (optional)"
         />
         <div className="flex justify-between mt-1">
           {fieldErrors.description && (
@@ -229,6 +191,22 @@ const CreateTaskForm = ({ onTaskCreated, onCancel }) => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Event Type</label>
+          <select
+            name="type"
+            value={formData.type}
+            onChange={handleChange}
+            className={getFieldClassName('type')}
+          >
+            <option value="meeting">Meeting</option>
+            <option value="training">Training</option>
+            <option value="maintenance">Maintenance</option>
+            <option value="harvest">Harvest</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
           <select
             name="priority"
@@ -241,73 +219,46 @@ const CreateTaskForm = ({ onTaskCreated, onCancel }) => {
             <option value="low">Low</option>
           </select>
         </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Task Type</label>
-          <select
-            name="tag"
-            value={formData.tag}
-            onChange={handleChange}
-            className={getFieldClassName('tag')}
-          >
-            <option value="static">Static (Daily/Recurrent)</option>
-            <option value="dynamic">Dynamic (One-time)</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-        {formData.tag === "static" && "This task will recur every day."}
-        {formData.tag === "dynamic" && "This task will only be active on the selected date."}
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Assign To <span className="text-red-500">*</span>
-        </label>
-        <select
-          name="assigned_to"
-          value={formData.assigned_to}
+        <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+        <input
+          type="text"
+          name="location"
+          value={formData.location}
           onChange={handleChange}
-          className={getFieldClassName('assigned_to')}
-        >
-          <option value="">-- Select User --</option>
-          {users.map((user) => (
-            <option key={user.id} value={user.id}>
-              {user.full_name} ({user.role})
-            </option>
-          ))}
-        </select>
-        {fieldErrors.assigned_to && (
-          <p className="text-red-500 text-xs mt-1">{fieldErrors.assigned_to}</p>
-        )}
+          maxLength={200}
+          className={getFieldClassName('location')}
+          placeholder="Enter event location (optional)"
+        />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Due Date <span className="text-red-500">*</span>
+            Event Date <span className="text-red-500">*</span>
           </label>
           <input
             type="date"
-            name="due_date"
-            value={formData.due_date}
+            name="event_date"
+            value={formData.event_date}
             onChange={handleChange}
             min={new Date().toISOString().split('T')[0]}
-            className={getFieldClassName('due_date')}
+            className={getFieldClassName('event_date')}
           />
-          {fieldErrors.due_date && (
-            <p className="text-red-500 text-xs mt-1">{fieldErrors.due_date}</p>
+          {fieldErrors.event_date && (
+            <p className="text-red-500 text-xs mt-1">{fieldErrors.event_date}</p>
           )}
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Due Time</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Event Time</label>
           <input
             type="time"
-            name="due_time"
-            value={formData.due_time}
+            name="event_time"
+            value={formData.event_time}
             onChange={handleChange}
-            className={getFieldClassName('due_time')}
+            className={getFieldClassName('event_time')}
           />
         </div>
       </div>
@@ -323,14 +274,14 @@ const CreateTaskForm = ({ onTaskCreated, onCancel }) => {
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            Creating Task...
+            Creating Event...
           </span>
         ) : (
-          "Create Task"
+          "Create Event"
         )}
       </button>
     </form>
   )
 }
 
-export default CreateTaskForm
+export default CreateEventForm

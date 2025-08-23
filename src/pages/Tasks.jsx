@@ -5,11 +5,13 @@ import { tasksAPI } from "../services/api"
 import { CheckCircle, Clock, Filter, Upload, Camera, X, Eye, FileText, Calendar, User } from "lucide-react"
 import { useAuth } from "../contexts/AuthContext"
 import CreateTaskForm from "../components/CreateTaskForm"
+import { format } from "date-fns"
 
 
 const Tasks = () => {
   const { user } = useAuth()
   const [tasks, setTasks] = useState([])
+  const [weeklyTasks, setWeeklyTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState("all")
   const [showCreateTaskForm, setShowCreateTaskForm] = useState(false)
@@ -23,10 +25,13 @@ const Tasks = () => {
   })
   const [showCamera, setShowCamera] = useState(false)
   const [cameraStream, setCameraStream] = useState(null)
+  const [showAllTasks, setShowAllTasks] = useState(false)
+  const [showAllWeeklyTasks, setShowAllWeeklyTasks] = useState(false)
   const videoRef = useRef(null)
 
   useEffect(() => {
     fetchTasks()
+    fetchWeeklyTasks()
   }, [])
 
   
@@ -117,6 +122,18 @@ const Tasks = () => {
       setTasks([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchWeeklyTasks = async () => {
+    try {
+      const response = await tasksAPI.getWeeklyHistory()
+      if (response.data) {
+        setWeeklyTasks(response.data)
+      }
+    } catch (error) {
+      console.error("Error fetching weekly tasks:", error)
+      setWeeklyTasks([])
     }
   }
 
@@ -278,81 +295,162 @@ const Tasks = () => {
         </div>
       </div>
 
-  {/* Tasks Grid */}
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
-        {filteredTasks.map((task) => (
-          <div key={task.id || Math.random()} className="card hover:shadow-lg transition-shadow">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                {task.status === "completed" ? (
-                  <CheckCircle className="w-6 h-6 text-green-500" />
-                ) : (
-                  <Clock className="w-6 h-6 text-gray-400" />
+        {/* Today's Tasks */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Today's Tasks</h2>
+          {filteredTasks.length > 6 && (
+            <button
+              onClick={() => setShowAllTasks(!showAllTasks)}
+              className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+            >
+              {showAllTasks ? "Show Less" : `See More (${filteredTasks.length - 6})`}
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
+          {(showAllTasks ? filteredTasks : filteredTasks.slice(0, 6)).map((task) => (
+            <div key={task.id || Math.random()} className="card hover:shadow-lg transition-shadow">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  {task.status === "completed" ? (
+                    <CheckCircle className="w-6 h-6 text-green-500" />
+                  ) : (
+                    <Clock className="w-6 h-6 text-gray-400" />
+                  )}
+                  <div>
+                    <h3
+                      className={`font-semibold ${task.status === "completed" ? "line-through text-gray-500" : "text-gray-900"}`}
+                    >
+                      {task.title}
+                    </h3>
+                    <span
+                      className={`inline-block px-2 py-1 text-xs font-medium rounded-full border ${getPriorityColor(task.priority)} mt-1`}
+                    >
+                      {task.priority}
+                    </span>
+                  </div>
+                </div>
+
+                {task.status === "completed" && task.evidence_photo && (
+                  <div className="text-right">
+                    <span className="text-xs text-gray-500">Evidence</span>
+                    <div className="flex items-center space-x-1 mt-1">
+                      <Camera className="w-4 h-4 text-green-500" />
+                      <span className="text-xs text-green-600">Uploaded</span>
+                    </div>
+                  </div>
                 )}
-                <div>
-                  <h3
-                    className={`font-semibold ${task.status === "completed" ? "line-through text-gray-500" : "text-gray-900"}`}
-                  >
-                    {task.title}
-                  </h3>
-                  <span
-                    className={`inline-block px-2 py-1 text-xs font-medium rounded-full border ${getPriorityColor(task.priority)} mt-1`}
-                  >
-                    {task.priority}
-                  </span>
+              </div>
+
+              <p className="text-gray-600 text-sm mb-4 line-clamp-2">{task.description}</p>
+
+              <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                <div className="flex items-center space-x-4">
+                  <span>📅 {task.due_time}</span>
                 </div>
               </div>
 
-              {task.status === "completed" && task.evidence_photo && (
-                <div className="text-right">
-                  <span className="text-xs text-gray-500">Evidence</span>
-                  <div className="flex items-center space-x-1 mt-1">
-                    <Camera className="w-4 h-4 text-green-500" />
-                    <span className="text-xs text-green-600">Uploaded</span>
+              <span className="ml-2 text-xs px-2 py-1 rounded bg-gray-100 border border-gray-300">
+                {task.tag === "static" ? "Static (Daily)" : "Dynamic (One-time)"}
+              </span>
+
+              {task.status === "completed" ? (
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-green-600 font-medium">
+                    ✅ Completed {task.completed_at ? new Date(task.completed_at).toLocaleString() : 'Recently'}
                   </div>
+                  <button
+                    onClick={() => handleCompletedTaskClick(task)}
+                    className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center space-x-1 transition-colors"
+                  >
+                    <Eye className="w-4 h-4" />
+                    <span>View Details</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => handleMarkCompleteClick(task)}
+                    className="btn-primary text-sm flex items-center space-x-2 w-full justify-center"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Mark Complete</span>
+                  </button>
                 </div>
               )}
             </div>
+          ))}
+        </div>
+      </div>
 
-            <p className="text-gray-600 text-sm mb-4 line-clamp-2">{task.description}</p>
-
-            <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-              <div className="flex items-center space-x-4">
-                <span>📅 {task.due_time}</span>
-              </div>
-            </div>
-
-            <span className="ml-2 text-xs px-2 py-1 rounded bg-gray-100 border border-gray-300">
-              {task.tag === "static" ? "Static (Daily)" : "Dynamic (One-time)"}
-            </span>
-
-            {task.status === "completed" ? (
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-green-600 font-medium">
-                  ✅ Completed {task.completed_at ? new Date(task.completed_at).toLocaleString() : 'Recently'}
-                </div>
-                <button
-                  onClick={() => handleCompletedTaskClick(task)}
-                  className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center space-x-1 transition-colors"
-                >
-                  <Eye className="w-4 h-4" />
-                  <span>View Details</span>
-                </button>
-              </div>
-            ) : (
-              <div className="flex justify-center">
-                <button
-                  onClick={() => handleMarkCompleteClick(task)}
-                  className="btn-primary text-sm flex items-center space-x-2 w-full justify-center"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  <span>Mark Complete</span>
-                </button>
-              </div>
+      {/* Weekly Task History */}
+      {weeklyTasks.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">This Week's Tasks</h2>
+            {weeklyTasks.length > 6 && (
+              <button
+                onClick={() => setShowAllWeeklyTasks(!showAllWeeklyTasks)}
+                className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+              >
+                {showAllWeeklyTasks ? "Show Less" : `See More (${weeklyTasks.length - 6})`}
+              </button>
             )}
           </div>
-        ))}
-      </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {(showAllWeeklyTasks ? weeklyTasks : weeklyTasks.slice(0, 6)).map((task) => (
+              <div key={task.id || Math.random()} className="card hover:shadow-lg transition-shadow">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    {task.status === "completed" ? (
+                      <CheckCircle className="w-6 h-6 text-green-500" />
+                    ) : (
+                      <Clock className="w-6 h-6 text-gray-400" />
+                    )}
+                    <div>
+                      <h3
+                        className={`font-semibold ${task.status === "completed" ? "line-through text-gray-500" : "text-gray-900"}`}
+                      >
+                        {task.title}
+                      </h3>
+                      <span
+                        className={`inline-block px-2 py-1 text-xs font-medium rounded-full border ${getPriorityColor(task.priority)} mt-1`}
+                      >
+                        {task.priority}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{task.description}</p>
+
+                <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                  <div className="flex items-center space-x-4">
+                    <span>📅 {task.due_time}</span>
+                  </div>
+                </div>
+
+                <span className="ml-2 text-xs px-2 py-1 rounded bg-gray-100 border border-gray-300">
+                  {task.tag === "static" ? "Static (Daily)" : "Dynamic (One-time)"}
+                </span>
+
+                <div className="flex justify-center mt-4">
+                  <button
+                    onClick={() => handleCompletedTaskClick(task)}
+                    className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center space-x-1 transition-colors"
+                  >
+                    <Eye className="w-4 h-4" />
+                    <span>View Details</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Completion Form Modal */}
       {showCompletionForm && selectedTask && (

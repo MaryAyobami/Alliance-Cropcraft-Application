@@ -9,6 +9,8 @@ import ResetPassword from "./pages/ResetPassword"
 import VerifyEmail from "./pages/VerifyEmail"
 import Dashboard from "./pages/Dashboard"
 import Tasks from "./pages/Tasks"
+import TaskHistory from "./pages/TaskHistory"
+import TaskDetails from "./pages/TaskDetails"
 import Calendar from "./pages/Calendar"
 import Reports from "./pages/Reports"
 import Livestock from "./pages/Livestock"
@@ -127,6 +129,26 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Tasks />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/task-history"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <TaskHistory />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/task-details/:id"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <TaskDetails />
                 </Layout>
               </ProtectedRoute>
             }
