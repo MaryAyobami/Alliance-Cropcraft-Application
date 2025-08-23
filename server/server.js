@@ -201,26 +201,54 @@ const queryWithRetry = async (query, params = []) => {
   }
 };
 
-// Auth routes
+// Login endpoint with email verification check
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body
     
+    // Enhanced validation
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" })
+      return res.status(400).json({ 
+        message: "Email and password are required",
+        field: !email ? "email" : "password"
+      })
+    }
+    
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ 
+        message: "Please enter a valid email address",
+        field: "email"
+      })
     }
     
     const result = await queryWithRetry("SELECT * FROM users WHERE email = $1", [email])
     const user = result.rows[0]
     
     if (!user) {
-      return res.status(401).json({ message: "User does not exist" })
+      return res.status(401).json({ 
+        message: "Invalid email or password",
+        field: "email"
+      })
     }
     
     const validPassword = await bcrypt.compare(password, user.password_hash);
 
     if (!validPassword) {
-      return res.status(401).json({ message: "Invalid email or password" })
+      return res.status(401).json({ 
+        message: "Invalid email or password",
+        field: "password"
+      })
+    }
+
+    // Check if email is verified
+    if (!user.email_confirmed_at && !user.confirmed_at) {
+      return res.status(401).json({ 
+        message: "Please verify your email address before logging in. Check your inbox for a verification link.",
+        email_not_verified: true,
+        user_email: email
+      })
     }
 
     const token = jwt.sign(
@@ -228,6 +256,9 @@ app.post("/api/auth/login", async (req, res) => {
       process.env.JWT_SECRET || "your-secret-key",
       { expiresIn: "24h" },
     )
+
+    // Update last login
+    await queryWithRetry("UPDATE users SET last_sign_in_at = NOW() WHERE id = $1", [user.id])
 
     res.json({
       token,
@@ -236,88 +267,187 @@ app.post("/api/auth/login", async (req, res) => {
         full_name: user.full_name,
         email: user.email,
         role: user.role,
+        email_verified: true
       },
     })
   } catch (error) {
     console.error("Login error:", error)
-    res.status(500).json({ message: "Server error" })
+    res.status(500).json({ 
+      message: "Login failed. Please try again.",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    })
   }
 })
 
+// Registration endpoint with proper email verification
 app.post("/api/auth/register", async (req, res) => {
   try {
     const { full_name, email, phone, password, role } = req.body
 
+    // Enhanced validation
     if (!full_name || !email || !password) {
-      return res.status(400).json({ message: "Full name, email and password are required" })
+      return res.status(400).json({ 
+        message: "Full name, email and password are required",
+        field: !full_name ? "full_name" : !email ? "email" : "password"
+      })
+    }
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ 
+        message: "Please enter a valid email address",
+        field: "email"
+      })
+    }
+
+    // Password strength validation
+    if (password.length < 8) {
+      return res.status(400).json({ 
+        message: "Password must be at least 8 characters long",
+        field: "password"
+      })
     }
 
     // Check if user exists
     const existingUser = await queryWithRetry("SELECT * FROM users WHERE email = $1", [email])
     if (existingUser.rows.length > 0) {
-      return res.status(400).json({ message: "User already exists" })
+      return res.status(400).json({ 
+        message: "An account with this email already exists",
+        field: "email"
+      })
     }
 
     // Hash password
-    const password_hash = await bcrypt.hash(password, 10)
+    const password_hash = await bcrypt.hash(password, 12) // Increased salt rounds for better security
+
+    // Generate verification token
+    const crypto = require('crypto')
+    const verificationToken = crypto.randomBytes(32).toString('hex')
 
     const result = await queryWithRetry(
-      "INSERT INTO users (full_name, email, phone, password_hash, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, full_name, email, role",
-      [full_name, email, phone || null, password_hash, role || 'Staff'],
+      `INSERT INTO users (full_name, email, phone, password_hash, role, confirmation_token, created_at) 
+       VALUES ($1, $2, $3, $4, $5, $6, NOW()) 
+       RETURNING id, full_name, email, role`,
+      [full_name, email, phone || null, password_hash, role || 'Staff', verificationToken],
     )
 
     const user = result.rows[0]
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || "your-secret-key",
-      { expiresIn: "24h" },
-    )
 
+    // Send verification email
+    if (notificationSystem) {
+      try {
+        await notificationSystem.SimpleNotifications.sendVerificationEmail(user, verificationToken)
+        console.log(`Verification email sent to ${email}`)
+      } catch (emailError) {
+        console.error('Failed to send verification email:', emailError)
+        // Don't fail registration if email fails, but log it
+      }
+    }
+
+    // Return success without token (user needs to verify email first)
     res.status(201).json({
-      token,
+      message: "Registration successful. Please check your email to verify your account.",
       user: {
         id: user.id,
         full_name: user.full_name,
         email: user.email,
         role: user.role,
+        email_verified: false
       },
+      verification_required: true
     })
   } catch (error) {
     console.error("Registration error:", error)
-    res.status(500).json({ message: "Server error" })
+    
+    // Handle specific database errors
+    if (error.code === '23505') { // Unique constraint violation
+      return res.status(400).json({ 
+        message: "An account with this email already exists",
+        field: "email"
+      })
+    }
+    
+    res.status(500).json({ 
+      message: "Registration failed. Please try again.",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    })
   }
 })
 
-// Email verification endpoint
+// Send verification email endpoint
 app.post("/api/auth/send-verification", async (req, res) => {
   try {
     const { email } = req.body
     
     if (!email) {
-      return res.status(400).json({ message: "Email is required" })
+      return res.status(400).json({ 
+        message: "Email is required",
+        field: "email"
+      })
+    }
+    
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ 
+        message: "Please enter a valid email address",
+        field: "email"
+      })
     }
     
     // Check if user exists
     const userResult = await queryWithRetry("SELECT * FROM users WHERE email = $1", [email])
     if (userResult.rows.length === 0) {
-      return res.status(404).json({ message: "User not found" })
+      return res.status(404).json({ 
+        message: "No account found with this email address",
+        field: "email"
+      })
     }
     
-    // Generate verification token
+    const user = userResult.rows[0]
+    
+    // Check if already verified
+    if (user.email_confirmed_at || user.confirmed_at) {
+      return res.status(400).json({ 
+        message: "This email is already verified"
+      })
+    }
+    
+    // Generate new verification token
     const crypto = require('crypto')
     const verificationToken = crypto.randomBytes(32).toString('hex')
     
-    // Store token in database (you may want to create a verification_tokens table)
-    // For now, we'll just simulate success
+    // Update token in database
+    await queryWithRetry(
+      "UPDATE users SET confirmation_token = $1, confirmation_sent_at = NOW() WHERE email = $2",
+      [verificationToken, email]
+    )
     
-    // Here you would send the email with the verification link
-    // For demo purposes, we'll just return success
-    console.log(`Verification email would be sent to ${email} with token: ${verificationToken}`)
+    // Send verification email
+    if (notificationSystem) {
+      try {
+        await notificationSystem.SimpleNotifications.sendVerificationEmail(user, verificationToken)
+        console.log(`Verification email resent to ${email}`)
+      } catch (emailError) {
+        console.error('Failed to send verification email:', emailError)
+        return res.status(500).json({ 
+          message: "Failed to send verification email. Please try again."
+        })
+      }
+    } else {
+      console.log(`Verification email would be sent to ${email} with token: ${verificationToken}`)
+    }
     
-    res.json({ message: "Verification email sent successfully" })
+    res.json({ 
+      message: "Verification email sent successfully. Please check your inbox and spam folder."
+    })
   } catch (error) {
     console.error("Send verification error:", error)
-    res.status(500).json({ message: "Server error" })
+    res.status(500).json({ 
+      message: "Failed to send verification email. Please try again.",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    })
   }
 })
 
@@ -327,17 +457,62 @@ app.post("/api/auth/verify-email", async (req, res) => {
     const { token } = req.body
     
     if (!token) {
-      return res.status(400).json({ message: "Verification token is required" })
+      return res.status(400).json({ 
+        message: "Verification token is required",
+        field: "token"
+      })
     }
     
-    // Here you would verify the token and mark the user as verified
-    // For demo purposes, we'll just return success
-    console.log(`Email verification attempted with token: ${token}`)
+    // Find user with this token
+    const userResult = await queryWithRetry(
+      "SELECT * FROM users WHERE confirmation_token = $1 AND confirmation_token IS NOT NULL",
+      [token]
+    )
     
-    res.json({ message: "Email verified successfully" })
+    if (userResult.rows.length === 0) {
+      return res.status(400).json({ 
+        message: "Invalid or expired verification token"
+      })
+    }
+    
+    const user = userResult.rows[0]
+    
+    // Check if token is expired (24 hours)
+    if (user.confirmation_sent_at) {
+      const tokenAge = Date.now() - new Date(user.confirmation_sent_at).getTime()
+      const twentyFourHours = 24 * 60 * 60 * 1000
+      
+      if (tokenAge > twentyFourHours) {
+        return res.status(400).json({ 
+          message: "Verification token has expired. Please request a new one.",
+          token_expired: true
+        })
+      }
+    }
+    
+    // Verify the email
+    await queryWithRetry(
+      `UPDATE users SET 
+       email_confirmed_at = NOW(), 
+       confirmed_at = NOW(), 
+       confirmation_token = NULL, 
+       confirmation_sent_at = NULL 
+       WHERE id = $1`,
+      [user.id]
+    )
+    
+    console.log(`Email verified successfully for user: ${user.email}`)
+    
+    res.json({ 
+      message: "Email verified successfully! You can now log in to your account.",
+      verified: true
+    })
   } catch (error) {
     console.error("Email verification error:", error)
-    res.status(500).json({ message: "Server error" })
+    res.status(500).json({ 
+      message: "Email verification failed. Please try again.",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    })
   }
 })
 
@@ -567,24 +742,110 @@ app.post("/api/tasks", authenticateToken, async (req, res) => {
     } = req.body
     const created_by = req.user.id
 
-    if (!title || !due_date || !tag) {
-      return res.status(400).json({ message: "Title, due date, and tag are required" })
+    // Enhanced validation
+    if (!title || !title.trim()) {
+      return res.status(400).json({ 
+        message: "Task title is required",
+        field: "title"
+      })
+    }
+
+    if (title.length > 100) {
+      return res.status(400).json({ 
+        message: "Task title must be less than 100 characters",
+        field: "title"
+      })
+    }
+
+    if (!due_date) {
+      return res.status(400).json({ 
+        message: "Due date is required",
+        field: "due_date"
+      })
+    }
+
+    // Validate due date format and not in past
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+    if (!dateRegex.test(due_date)) {
+      return res.status(400).json({ 
+        message: "Due date must be in YYYY-MM-DD format",
+        field: "due_date"
+      })
+    }
+
+    const selectedDate = new Date(due_date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    if (selectedDate < today) {
+      return res.status(400).json({ 
+        message: "Due date cannot be in the past",
+        field: "due_date"
+      })
+    }
+
+    if (!assigned_to) {
+      return res.status(400).json({ 
+        message: "Please assign the task to someone",
+        field: "assigned_to"
+      })
+    }
+
+    // Verify assigned user exists
+    const userCheck = await queryWithRetry("SELECT id FROM users WHERE id = $1", [assigned_to])
+    if (userCheck.rows.length === 0) {
+      return res.status(400).json({ 
+        message: "Assigned user does not exist",
+        field: "assigned_to"
+      })
+    }
+
+    if (!tag || !["static", "dynamic"].includes(tag)) {
+      return res.status(400).json({ 
+        message: "Task type must be either 'static' or 'dynamic'",
+        field: "tag"
+      })
+    }
+
+    if (description && description.length > 500) {
+      return res.status(400).json({ 
+        message: "Description must be less than 500 characters",
+        field: "description"
+      })
+    }
+
+    if (priority && !["high", "medium", "low"].includes(priority.toLowerCase())) {
+      return res.status(400).json({ 
+        message: "Priority must be 'high', 'medium', or 'low'",
+        field: "priority"
+      })
+    }
+
+    // Validate time format if provided
+    if (due_time) {
+      const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/
+      if (!timeRegex.test(due_time)) {
+        return res.status(400).json({ 
+          message: "Due time must be in HH:MM format",
+          field: "due_time"
+        })
+      }
     }
 
     let finalRecurrent = tag === "static" ? true : false
     let finalActiveDate = tag === "dynamic" ? (active_date || due_date) : null
 
-    const result = await pool.query(
+    const result = await queryWithRetry(
       `INSERT INTO tasks 
-       (title, description, due_date, due_time, assigned_to, priority, created_by, status, tag, recurrent, active_date) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+       (title, description, due_date, due_time, assigned_to, priority, created_by, status, tag, recurrent, active_date, created_at) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW()) RETURNING *`,
       [
-        title,
-        description,
+        title.trim(),
+        description ? description.trim() : null,
         due_date,
         due_time || null,
         assigned_to,
-        priority || 'Medium',
+        priority ? priority.toLowerCase() : 'medium',
         created_by,
         'pending',
         tag,
@@ -593,10 +854,52 @@ app.post("/api/tasks", authenticateToken, async (req, res) => {
       ]
     )
 
-    res.status(201).json({ message: 'Task created successfully', task: result.rows[0] })
+    const createdTask = result.rows[0]
+
+    // Send notification to assigned user if notification system is available
+    if (notificationSystem && assigned_to !== created_by) {
+      try {
+        const assignedUser = await queryWithRetry("SELECT * FROM users WHERE id = $1", [assigned_to])
+        const createdByUser = await queryWithRetry("SELECT * FROM users WHERE id = $1", [created_by])
+        
+        if (assignedUser.rows.length > 0 && createdByUser.rows.length > 0) {
+          await notificationSystem.SimpleNotifications.sendTaskAssignment(
+            assignedUser.rows[0], 
+            createdByUser.rows[0], 
+            createdTask
+          )
+        }
+      } catch (notifError) {
+        console.error("Failed to send task assignment notification:", notifError)
+        // Don't fail task creation if notification fails
+      }
+    }
+
+    res.status(201).json({ 
+      message: 'Task created successfully', 
+      task: createdTask 
+    })
   } catch (error) {
     console.error("Create task error:", error)
-    res.status(500).json({ message: "Server error" })
+    
+    // Handle specific database errors
+    if (error.code === '23505') { // Unique constraint violation
+      return res.status(400).json({ 
+        message: "A task with similar details already exists"
+      })
+    }
+    
+    if (error.code === '23503') { // Foreign key violation
+      return res.status(400).json({ 
+        message: "Invalid user assignment",
+        field: "assigned_to"
+      })
+    }
+    
+    res.status(500).json({ 
+      message: "Failed to create task. Please try again.",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    })
   }
 })
 
@@ -743,19 +1046,140 @@ app.post("/api/events", authenticateToken, async (req, res) => {
     const { title, description, event_date, event_time, location, type, priority } = req.body
     const created_by = req.user.id
 
-    if (!title || !event_date) {
-      return res.status(400).json({ message: "Title and event date are required" })
+    // Enhanced validation
+    if (!title || !title.trim()) {
+      return res.status(400).json({ 
+        message: "Event title is required",
+        field: "title"
+      })
     }
 
-    const result = await pool.query(
-      "INSERT INTO events (title, description, event_date, event_time, location, type, priority, created_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
-      [title, description, event_date, event_time || null, location || null, type || "Task", priority || "Medium", created_by],
+    if (title.length > 100) {
+      return res.status(400).json({ 
+        message: "Event title must be less than 100 characters",
+        field: "title"
+      })
+    }
+
+    if (!event_date) {
+      return res.status(400).json({ 
+        message: "Event date is required",
+        field: "event_date"
+      })
+    }
+
+    // Validate event date format and not in past
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+    if (!dateRegex.test(event_date)) {
+      return res.status(400).json({ 
+        message: "Event date must be in YYYY-MM-DD format",
+        field: "event_date"
+      })
+    }
+
+    const selectedDate = new Date(event_date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    if (selectedDate < today) {
+      return res.status(400).json({ 
+        message: "Event date cannot be in the past",
+        field: "event_date"
+      })
+    }
+
+    if (description && description.length > 500) {
+      return res.status(400).json({ 
+        message: "Description must be less than 500 characters",
+        field: "description"
+      })
+    }
+
+    if (location && location.length > 100) {
+      return res.status(400).json({ 
+        message: "Location must be less than 100 characters",
+        field: "location"
+      })
+    }
+
+    if (type && !["Task", "Meeting", "Appointment", "Reminder", "Other"].includes(type)) {
+      return res.status(400).json({ 
+        message: "Event type must be one of: Task, Meeting, Appointment, Reminder, Other",
+        field: "type"
+      })
+    }
+
+    if (priority && !["high", "medium", "low"].includes(priority.toLowerCase())) {
+      return res.status(400).json({ 
+        message: "Priority must be 'high', 'medium', or 'low'",
+        field: "priority"
+      })
+    }
+
+    // Validate time format if provided
+    if (event_time) {
+      const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/
+      if (!timeRegex.test(event_time)) {
+        return res.status(400).json({ 
+          message: "Event time must be in HH:MM format",
+          field: "event_time"
+        })
+      }
+    }
+
+    const result = await queryWithRetry(
+      `INSERT INTO events 
+       (title, description, event_date, event_time, location, type, priority, created_by, created_at) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING *`,
+      [
+        title.trim(),
+        description ? description.trim() : null,
+        event_date,
+        event_time || null,
+        location ? location.trim() : null,
+        type || "Task",
+        priority ? priority.toLowerCase() : "medium",
+        created_by
+      ],
     )
 
-    res.status(201).json(result.rows[0])
+    const createdEvent = result.rows[0]
+
+    // Send notification about the new event if notification system is available
+    if (notificationSystem) {
+      try {
+        const createdByUser = await queryWithRetry("SELECT * FROM users WHERE id = $1", [created_by])
+        
+        if (createdByUser.rows.length > 0) {
+          await notificationSystem.SimpleNotifications.sendEventNotification(
+            createdByUser.rows[0], 
+            createdEvent
+          )
+        }
+      } catch (notifError) {
+        console.error("Failed to send event notification:", notifError)
+        // Don't fail event creation if notification fails
+      }
+    }
+
+    res.status(201).json({
+      message: "Event created successfully",
+      event: createdEvent
+    })
   } catch (error) {
     console.error("Create event error:", error)
-    res.status(500).json({ message: "Server error" })
+    
+    // Handle specific database errors
+    if (error.code === '23505') { // Unique constraint violation
+      return res.status(400).json({ 
+        message: "An event with similar details already exists"
+      })
+    }
+    
+    res.status(500).json({ 
+      message: "Failed to create event. Please try again.",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    })
   }
 })
 
@@ -1088,6 +1512,514 @@ app.post('/api/notifications/subscribe', authenticateToken, async (req, res) => 
     res.json({ success: true })
   } catch (err) {
     res.status(500).json({ error: 'Failed to save subscription' })
+  }
+})
+
+// Livestock API endpoints
+// Role-based access helper for livestock
+const checkLivestockAccess = (userRole, operation) => {
+  const permissions = {
+    'Admin': ['view', 'create', 'update', 'delete'],
+    'Farm Manager': ['view', 'create', 'update', 'delete'],
+    'Veterinary Doctor': ['view', 'update'],
+    'Pasture Manager': ['view'],
+    'Staff': ['view'],
+    'Farm Attendant': ['view'],
+    'Maintenance Officer': ['view'],
+    'Field Production Officer': ['view']
+  }
+  
+  return permissions[userRole]?.includes(operation) || false
+}
+
+// Get all livestock (all users can view)
+app.get("/api/livestock", authenticateToken, async (req, res) => {
+  try {
+    if (!checkLivestockAccess(req.user.role, 'view')) {
+      return res.status(403).json({ 
+        message: "You don't have permission to view livestock data"
+      })
+    }
+
+    const result = await queryWithRetry(`
+      SELECT l.*, u.full_name as created_by_name 
+      FROM livestock l 
+      LEFT JOIN users u ON l.created_by = u.id 
+      ORDER BY l.created_at DESC
+    `)
+
+    res.json(result.rows)
+  } catch (error) {
+    console.error("Get livestock error:", error)
+    res.status(500).json({ 
+      message: "Failed to fetch livestock data",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    })
+  }
+})
+
+// Get single livestock by ID
+app.get("/api/livestock/:id", authenticateToken, async (req, res) => {
+  try {
+    if (!checkLivestockAccess(req.user.role, 'view')) {
+      return res.status(403).json({ 
+        message: "You don't have permission to view livestock data"
+      })
+    }
+
+    const { id } = req.params
+    
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ 
+        message: "Invalid livestock ID",
+        field: "id"
+      })
+    }
+
+    const result = await queryWithRetry(`
+      SELECT l.*, u.full_name as created_by_name 
+      FROM livestock l 
+      LEFT JOIN users u ON l.created_by = u.id 
+      WHERE l.id = $1
+    `, [id])
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ 
+        message: "Livestock not found"
+      })
+    }
+
+    res.json(result.rows[0])
+  } catch (error) {
+    console.error("Get livestock by ID error:", error)
+    res.status(500).json({ 
+      message: "Failed to fetch livestock data",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    })
+  }
+})
+
+// Create new livestock (Admin and Farm Manager only)
+app.post("/api/livestock", authenticateToken, async (req, res) => {
+  try {
+    if (!checkLivestockAccess(req.user.role, 'create')) {
+      return res.status(403).json({ 
+        message: "You don't have permission to create livestock records"
+      })
+    }
+
+    const {
+      name,
+      species,
+      breed,
+      age,
+      weight,
+      gender,
+      health_status,
+      location,
+      acquisition_date,
+      identification_number,
+      vaccination_records,
+      medical_history,
+      feeding_schedule,
+      notes,
+      photos
+    } = req.body
+
+    // Enhanced validation
+    if (!name || !name.trim()) {
+      return res.status(400).json({ 
+        message: "Animal name is required",
+        field: "name"
+      })
+    }
+
+    if (name.length > 100) {
+      return res.status(400).json({ 
+        message: "Animal name must be less than 100 characters",
+        field: "name"
+      })
+    }
+
+    if (!species || !species.trim()) {
+      return res.status(400).json({ 
+        message: "Species is required",
+        field: "species"
+      })
+    }
+
+    if (species.length > 50) {
+      return res.status(400).json({ 
+        message: "Species must be less than 50 characters",
+        field: "species"
+      })
+    }
+
+    if (age && (age < 0 || age > 50)) {
+      return res.status(400).json({ 
+        message: "Age must be between 0 and 50 years",
+        field: "age"
+      })
+    }
+
+    if (weight && (weight < 0 || weight > 10000)) {
+      return res.status(400).json({ 
+        message: "Weight must be between 0 and 10,000 kg",
+        field: "weight"
+      })
+    }
+
+    if (gender && !['male', 'female'].includes(gender.toLowerCase())) {
+      return res.status(400).json({ 
+        message: "Gender must be 'male' or 'female'",
+        field: "gender"
+      })
+    }
+
+    if (health_status && !['healthy', 'sick', 'quarantine', 'deceased'].includes(health_status.toLowerCase())) {
+      return res.status(400).json({ 
+        message: "Health status must be one of: healthy, sick, quarantine, deceased",
+        field: "health_status"
+      })
+    }
+
+    if (acquisition_date) {
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+      if (!dateRegex.test(acquisition_date)) {
+        return res.status(400).json({ 
+          message: "Acquisition date must be in YYYY-MM-DD format",
+          field: "acquisition_date"
+        })
+      }
+
+      const selectedDate = new Date(acquisition_date)
+      const today = new Date()
+      
+      if (selectedDate > today) {
+        return res.status(400).json({ 
+          message: "Acquisition date cannot be in the future",
+          field: "acquisition_date"
+        })
+      }
+    }
+
+    if (identification_number && identification_number.length > 50) {
+      return res.status(400).json({ 
+        message: "Identification number must be less than 50 characters",
+        field: "identification_number"
+      })
+    }
+
+    const result = await queryWithRetry(`
+      INSERT INTO livestock (
+        name, species, breed, age, weight, gender, health_status, location,
+        acquisition_date, identification_number, vaccination_records, medical_history,
+        feeding_schedule, notes, photos, created_by, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), NOW())
+      RETURNING *
+    `, [
+      name.trim(),
+      species.trim(),
+      breed ? breed.trim() : null,
+      age || null,
+      weight || null,
+      gender ? gender.toLowerCase() : null,
+      health_status ? health_status.toLowerCase() : 'healthy',
+      location ? location.trim() : null,
+      acquisition_date || null,
+      identification_number ? identification_number.trim() : null,
+      vaccination_records ? JSON.stringify(vaccination_records) : '[]',
+      medical_history ? JSON.stringify(medical_history) : '[]',
+      feeding_schedule ? feeding_schedule.trim() : null,
+      notes ? notes.trim() : null,
+      photos ? photos : null,
+      req.user.id
+    ])
+
+    res.status(201).json({
+      message: "Livestock record created successfully",
+      livestock: result.rows[0]
+    })
+  } catch (error) {
+    console.error("Create livestock error:", error)
+    
+    if (error.code === '23505') { // Unique constraint violation
+      return res.status(400).json({ 
+        message: "Identification number already exists",
+        field: "identification_number"
+      })
+    }
+    
+    res.status(500).json({ 
+      message: "Failed to create livestock record",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    })
+  }
+})
+
+// Update livestock (Admin, Farm Manager, and Veterinary Doctor)
+app.put("/api/livestock/:id", authenticateToken, async (req, res) => {
+  try {
+    if (!checkLivestockAccess(req.user.role, 'update')) {
+      return res.status(403).json({ 
+        message: "You don't have permission to update livestock records"
+      })
+    }
+
+    const { id } = req.params
+    
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ 
+        message: "Invalid livestock ID",
+        field: "id"
+      })
+    }
+
+    // Check if livestock exists
+    const existingResult = await queryWithRetry("SELECT id FROM livestock WHERE id = $1", [id])
+    if (existingResult.rows.length === 0) {
+      return res.status(404).json({ 
+        message: "Livestock not found"
+      })
+    }
+
+    const {
+      name,
+      species,
+      breed,
+      age,
+      weight,
+      gender,
+      health_status,
+      location,
+      acquisition_date,
+      identification_number,
+      vaccination_records,
+      medical_history,
+      feeding_schedule,
+      notes,
+      photos
+    } = req.body
+
+    // Build dynamic update query
+    const updateFields = []
+    const updateValues = []
+    let paramIndex = 1
+
+    if (name !== undefined) {
+      if (!name.trim()) {
+        return res.status(400).json({ 
+          message: "Animal name cannot be empty",
+          field: "name"
+        })
+      }
+      updateFields.push(`name = $${paramIndex}`)
+      updateValues.push(name.trim())
+      paramIndex++
+    }
+
+    if (species !== undefined) {
+      if (!species.trim()) {
+        return res.status(400).json({ 
+          message: "Species cannot be empty",
+          field: "species"
+        })
+      }
+      updateFields.push(`species = $${paramIndex}`)
+      updateValues.push(species.trim())
+      paramIndex++
+    }
+
+    if (breed !== undefined) {
+      updateFields.push(`breed = $${paramIndex}`)
+      updateValues.push(breed ? breed.trim() : null)
+      paramIndex++
+    }
+
+    if (age !== undefined) {
+      if (age && (age < 0 || age > 50)) {
+        return res.status(400).json({ 
+          message: "Age must be between 0 and 50 years",
+          field: "age"
+        })
+      }
+      updateFields.push(`age = $${paramIndex}`)
+      updateValues.push(age || null)
+      paramIndex++
+    }
+
+    if (weight !== undefined) {
+      if (weight && (weight < 0 || weight > 10000)) {
+        return res.status(400).json({ 
+          message: "Weight must be between 0 and 10,000 kg",
+          field: "weight"
+        })
+      }
+      updateFields.push(`weight = $${paramIndex}`)
+      updateValues.push(weight || null)
+      paramIndex++
+    }
+
+    if (gender !== undefined) {
+      if (gender && !['male', 'female'].includes(gender.toLowerCase())) {
+        return res.status(400).json({ 
+          message: "Gender must be 'male' or 'female'",
+          field: "gender"
+        })
+      }
+      updateFields.push(`gender = $${paramIndex}`)
+      updateValues.push(gender ? gender.toLowerCase() : null)
+      paramIndex++
+    }
+
+    if (health_status !== undefined) {
+      if (health_status && !['healthy', 'sick', 'quarantine', 'deceased'].includes(health_status.toLowerCase())) {
+        return res.status(400).json({ 
+          message: "Health status must be one of: healthy, sick, quarantine, deceased",
+          field: "health_status"
+        })
+      }
+      updateFields.push(`health_status = $${paramIndex}`)
+      updateValues.push(health_status ? health_status.toLowerCase() : 'healthy')
+      paramIndex++
+    }
+
+    if (location !== undefined) {
+      updateFields.push(`location = $${paramIndex}`)
+      updateValues.push(location ? location.trim() : null)
+      paramIndex++
+    }
+
+    if (acquisition_date !== undefined) {
+      if (acquisition_date) {
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+        if (!dateRegex.test(acquisition_date)) {
+          return res.status(400).json({ 
+            message: "Acquisition date must be in YYYY-MM-DD format",
+            field: "acquisition_date"
+          })
+        }
+      }
+      updateFields.push(`acquisition_date = $${paramIndex}`)
+      updateValues.push(acquisition_date || null)
+      paramIndex++
+    }
+
+    if (identification_number !== undefined) {
+      updateFields.push(`identification_number = $${paramIndex}`)
+      updateValues.push(identification_number ? identification_number.trim() : null)
+      paramIndex++
+    }
+
+    if (vaccination_records !== undefined) {
+      updateFields.push(`vaccination_records = $${paramIndex}`)
+      updateValues.push(vaccination_records ? JSON.stringify(vaccination_records) : '[]')
+      paramIndex++
+    }
+
+    if (medical_history !== undefined) {
+      updateFields.push(`medical_history = $${paramIndex}`)
+      updateValues.push(medical_history ? JSON.stringify(medical_history) : '[]')
+      paramIndex++
+    }
+
+    if (feeding_schedule !== undefined) {
+      updateFields.push(`feeding_schedule = $${paramIndex}`)
+      updateValues.push(feeding_schedule ? feeding_schedule.trim() : null)
+      paramIndex++
+    }
+
+    if (notes !== undefined) {
+      updateFields.push(`notes = $${paramIndex}`)
+      updateValues.push(notes ? notes.trim() : null)
+      paramIndex++
+    }
+
+    if (photos !== undefined) {
+      updateFields.push(`photos = $${paramIndex}`)
+      updateValues.push(photos || null)
+      paramIndex++
+    }
+
+    if (updateFields.length === 0) {
+      return res.status(400).json({ 
+        message: "No fields provided for update"
+      })
+    }
+
+    // Add updated_at field
+    updateFields.push(`updated_at = NOW()`)
+    
+    // Add the ID parameter
+    updateValues.push(id)
+
+    const query = `
+      UPDATE livestock 
+      SET ${updateFields.join(', ')} 
+      WHERE id = $${paramIndex} 
+      RETURNING *
+    `
+
+    const result = await queryWithRetry(query, updateValues)
+
+    res.json({
+      message: "Livestock record updated successfully",
+      livestock: result.rows[0]
+    })
+  } catch (error) {
+    console.error("Update livestock error:", error)
+    
+    if (error.code === '23505') { // Unique constraint violation
+      return res.status(400).json({ 
+        message: "Identification number already exists",
+        field: "identification_number"
+      })
+    }
+    
+    res.status(500).json({ 
+      message: "Failed to update livestock record",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    })
+  }
+})
+
+// Delete livestock (Admin and Farm Manager only)
+app.delete("/api/livestock/:id", authenticateToken, async (req, res) => {
+  try {
+    if (!checkLivestockAccess(req.user.role, 'delete')) {
+      return res.status(403).json({ 
+        message: "You don't have permission to delete livestock records"
+      })
+    }
+
+    const { id } = req.params
+    
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ 
+        message: "Invalid livestock ID",
+        field: "id"
+      })
+    }
+
+    // Check if livestock exists
+    const existingResult = await queryWithRetry("SELECT * FROM livestock WHERE id = $1", [id])
+    if (existingResult.rows.length === 0) {
+      return res.status(404).json({ 
+        message: "Livestock not found"
+      })
+    }
+
+    await queryWithRetry("DELETE FROM livestock WHERE id = $1", [id])
+
+    res.json({
+      message: "Livestock record deleted successfully"
+    })
+  } catch (error) {
+    console.error("Delete livestock error:", error)
+    res.status(500).json({ 
+      message: "Failed to delete livestock record",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    })
   }
 })
 

@@ -273,6 +273,266 @@ class SimpleNotifications {
         }
     }
 
+    // Send verification email
+    static async sendVerificationEmail(user, token) {
+        const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${token}`;
+        
+        const mailOptions = {
+            from: 'ogunmolamaryayobami@gmail.com',
+            to: user.email,
+            subject: '🔒 Verify Your Alliance CropCraft Account',
+            html: `
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; background-color: #f9f9f9;">
+                    <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; color: white; border-radius: 10px 10px 0 0;">
+                        <h1 style="margin: 0; font-size: 24px;">🌱 Alliance CropCraft</h1>
+                        <p style="margin: 10px 0 0 0; opacity: 0.9;">Farm Management System</p>
+                    </div>
+                    
+                    <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                        <h2 style="color: #374151; margin-bottom: 20px;">Welcome ${user.full_name}! 🎉</h2>
+                        
+                        <p style="color: #6b7280; line-height: 1.6; margin-bottom: 20px;">
+                            Thank you for registering with Alliance CropCraft. To complete your account setup and start managing your farm operations, please verify your email address.
+                        </p>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${verificationUrl}" 
+                               style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+                                      color: white; 
+                                      padding: 15px 30px; 
+                                      text-decoration: none; 
+                                      border-radius: 8px; 
+                                      font-weight: bold; 
+                                      display: inline-block;
+                                      box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
+                                ✅ Verify My Email
+                            </a>
+                        </div>
+                        
+                        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                            <p style="color: #6b7280; margin: 0; font-size: 14px;">
+                                <strong>🔗 Can't click the button?</strong><br>
+                                Copy and paste this link into your browser:<br>
+                                <span style="word-break: break-all; color: #10b981;">${verificationUrl}</span>
+                            </p>
+                        </div>
+                        
+                        <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
+                            <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                                This verification link will expire in 24 hours for security reasons.<br>
+                                If you didn't create this account, please ignore this email.
+                            </p>
+                        </div>
+                        
+                        <div style="text-align: center; margin-top: 20px;">
+                            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                                Best regards,<br>
+                                <strong style="color: #10b981;">The Alliance CropCraft Team</strong>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `
+        };
+
+        try {
+            await emailer.sendMail(mailOptions);
+            console.log(`✅ Verification email sent to ${user.email}`);
+        } catch (error) {
+            console.error(`❌ Failed to send verification email to ${user.email}:`, error);
+            throw error;
+        }
+    }
+
+    // Send task assignment notification
+    static async sendTaskAssignment(assignedUser, createdByUser, task) {
+        const mailOptions = {
+            from: 'ogunmolamaryayobami@gmail.com',
+            to: assignedUser.email,
+            subject: '📋 New Task Assigned - Alliance CropCraft',
+            html: `
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; background-color: #f9f9f9;">
+                    <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; color: white; border-radius: 10px 10px 0 0;">
+                        <h1 style="margin: 0; font-size: 24px;">📋 New Task Assigned</h1>
+                        <p style="margin: 10px 0 0 0; opacity: 0.9;">Alliance CropCraft Task Management</p>
+                    </div>
+                    
+                    <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                        <h2 style="color: #374151; margin-bottom: 20px;">Hi ${assignedUser.full_name}! 👋</h2>
+                        
+                        <p style="color: #6b7280; line-height: 1.6; margin-bottom: 20px;">
+                            You have been assigned a new task by <strong>${createdByUser.full_name}</strong>. Here are the details:
+                        </p>
+                        
+                        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                            <h3 style="margin: 0 0 15px 0; color: #10b981; font-size: 18px;">${task.title}</h3>
+                            ${task.description ? `<p style="color: #6b7280; margin: 0 0 15px 0;">${task.description}</p>` : ''}
+                            
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 15px;">
+                                <div>
+                                    <strong style="color: #374151;">Priority:</strong>
+                                    <span style="color: ${task.priority === 'high' ? '#dc2626' : task.priority === 'medium' ? '#d97706' : '#059669'}; text-transform: capitalize;">${task.priority}</span>
+                                </div>
+                                <div>
+                                    <strong style="color: #374151;">Due Date:</strong>
+                                    <span style="color: #6b7280;">${task.due_date}</span>
+                                </div>
+                                ${task.due_time ? `
+                                <div>
+                                    <strong style="color: #374151;">Due Time:</strong>
+                                    <span style="color: #6b7280;">${task.due_time}</span>
+                                </div>
+                                ` : ''}
+                                <div>
+                                    <strong style="color: #374151;">Type:</strong>
+                                    <span style="color: #6b7280; text-transform: capitalize;">${task.tag}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/tasks" 
+                               style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+                                      color: white; 
+                                      padding: 15px 30px; 
+                                      text-decoration: none; 
+                                      border-radius: 8px; 
+                                      font-weight: bold; 
+                                      display: inline-block;
+                                      box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
+                                📋 View Task Details
+                            </a>
+                        </div>
+                        
+                        <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
+                            <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                                Please complete this task by the due date. If you have any questions, contact ${createdByUser.full_name} or your supervisor.
+                            </p>
+                        </div>
+                        
+                        <div style="text-align: center; margin-top: 20px;">
+                            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                                Best regards,<br>
+                                <strong style="color: #10b981;">The Alliance CropCraft Team</strong>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `
+        };
+
+        try {
+            await emailer.sendMail(mailOptions);
+            console.log(`✅ Task assignment email sent to ${assignedUser.email}`);
+        } catch (error) {
+            console.error(`❌ Failed to send task assignment email to ${assignedUser.email}:`, error);
+            throw error;
+        }
+    }
+
+    // Send event notification
+    static async sendEventNotification(createdByUser, event) {
+        // Get all users for event notifications (you might want to limit this to specific roles)
+        try {
+            const usersResult = await pool.query("SELECT * FROM users WHERE notif_email = true OR notif_email IS NULL");
+            const users = usersResult.rows;
+
+            for (const user of users) {
+                const mailOptions = {
+                    from: 'ogunmolamaryayobami@gmail.com',
+                    to: user.email,
+                    subject: '📅 New Event Created - Alliance CropCraft',
+                    html: `
+                        <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; background-color: #f9f9f9;">
+                            <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 30px; text-align: center; color: white; border-radius: 10px 10px 0 0;">
+                                <h1 style="margin: 0; font-size: 24px;">📅 New Event Created</h1>
+                                <p style="margin: 10px 0 0 0; opacity: 0.9;">Alliance CropCraft Event Management</p>
+                            </div>
+                            
+                            <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                                <h2 style="color: #374151; margin-bottom: 20px;">Hi ${user.full_name}! 👋</h2>
+                                
+                                <p style="color: #6b7280; line-height: 1.6; margin-bottom: 20px;">
+                                    A new event has been created by <strong>${createdByUser.full_name}</strong>. Here are the details:
+                                </p>
+                                
+                                <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                                    <h3 style="margin: 0 0 15px 0; color: #3b82f6; font-size: 18px;">${event.title}</h3>
+                                    ${event.description ? `<p style="color: #6b7280; margin: 0 0 15px 0;">${event.description}</p>` : ''}
+                                    
+                                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 15px;">
+                                        <div>
+                                            <strong style="color: #374151;">Date:</strong>
+                                            <span style="color: #6b7280;">${event.event_date}</span>
+                                        </div>
+                                        ${event.event_time ? `
+                                        <div>
+                                            <strong style="color: #374151;">Time:</strong>
+                                            <span style="color: #6b7280;">${event.event_time}</span>
+                                        </div>
+                                        ` : ''}
+                                        ${event.location ? `
+                                        <div>
+                                            <strong style="color: #374151;">Location:</strong>
+                                            <span style="color: #6b7280;">${event.location}</span>
+                                        </div>
+                                        ` : ''}
+                                        <div>
+                                            <strong style="color: #374151;">Type:</strong>
+                                            <span style="color: #6b7280;">${event.type}</span>
+                                        </div>
+                                        <div>
+                                            <strong style="color: #374151;">Priority:</strong>
+                                            <span style="color: ${event.priority === 'high' ? '#dc2626' : event.priority === 'medium' ? '#d97706' : '#059669'}; text-transform: capitalize;">${event.priority}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div style="text-align: center; margin: 30px 0;">
+                                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/calendar" 
+                                       style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); 
+                                              color: white; 
+                                              padding: 15px 30px; 
+                                              text-decoration: none; 
+                                              border-radius: 8px; 
+                                              font-weight: bold; 
+                                              display: inline-block;
+                                              box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);">
+                                        📅 View Calendar
+                                    </a>
+                                </div>
+                                
+                                <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
+                                    <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                                        Mark your calendar and make sure to attend this event. If you have any questions, contact the event organizer.
+                                    </p>
+                                </div>
+                                
+                                <div style="text-align: center; margin-top: 20px;">
+                                    <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                                        Best regards,<br>
+                                        <strong style="color: #3b82f6;">The Alliance CropCraft Team</strong>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    `
+                };
+
+                try {
+                    await emailer.sendMail(mailOptions);
+                    console.log(`✅ Event notification email sent to ${user.email}`);
+                } catch (error) {
+                    console.error(`❌ Failed to send event notification email to ${user.email}:`, error);
+                    // Continue with other users even if one fails
+                }
+            }
+        } catch (error) {
+            console.error('❌ Failed to send event notifications:', error);
+            throw error;
+        }
+    }
+
     // REAL DATABASE FUNCTIONS
     static async getAllUsers() {
         try {

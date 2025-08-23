@@ -11,6 +11,7 @@ import {
   Settings,
   LogOut,
   Bell,
+  Activity,
 } from "lucide-react"
 import { useState } from "react"
 
@@ -28,6 +29,7 @@ const Layout = ({ children }) => {
 		{ name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
 		{ name: "Tasks", href: "/tasks", icon: CheckSquare },
 		{ name: "Calendar", href: "/calendar", icon: Calendar },
+		{ name: "Livestock", href: "/livestock", icon: Activity },
 		...(user?.role === "Admin" ? [{ name: "Reports", href: "/reports", icon: BarChart3 }] : []),
 	];
 

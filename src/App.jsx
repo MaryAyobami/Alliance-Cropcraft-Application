@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard"
 import Tasks from "./pages/Tasks"
 import Calendar from "./pages/Calendar"
 import Reports from "./pages/Reports"
+import Livestock from "./pages/Livestock"
 import PWAInstallPrompt from "./components/PWAInstallPrompt"
 import Settings from "./pages/Settings"
 
@@ -103,6 +104,14 @@ function App() {
             }
           />
           <Route
+            path="/verify-email"
+            element={
+              <PublicRoute>
+                <VerifyEmail />
+              </PublicRoute>
+            }
+          />
+          <Route
             path="/dashboard"
             element={
               <ProtectedRoute>
@@ -128,6 +137,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Calendar />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/livestock"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Livestock />
                 </Layout>
               </ProtectedRoute>
             }

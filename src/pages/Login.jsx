@@ -37,7 +37,22 @@ const Login = () => {
       login(token, user)
       navigate("/dashboard")
     } catch (error) {
-      setError(error.response?.data?.message || "Login failed")
+      const errorData = error.response?.data
+      
+      if (errorData?.email_not_verified) {
+        // Handle email not verified error
+        navigate("/verify-email", {
+          state: {
+            message: errorData.message,
+            email: errorData.user_email
+          }
+        })
+      } else if (errorData?.field) {
+        // Handle field-specific errors
+        setError(errorData.message)
+      } else {
+        setError(errorData?.message || "Login failed")
+      }
     } finally {
       setLoading(false)
     }
