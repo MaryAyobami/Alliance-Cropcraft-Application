@@ -2,11 +2,37 @@
 
 import { useState, useEffect } from "react"
 import { reportsAPI } from "../services/api"
-import { TrendingUp, Users, DollarSign, Activity, Download } from "lucide-react"
+import { TrendingUp, Users, DollarSign, Activity, Download, BarChart3, PieChart } from "lucide-react"
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  BarElement,
+  ArcElement,
+} from 'chart.js'
+import { Line, Bar, Doughnut } from 'react-chartjs-2'
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  BarElement,
+  ArcElement
+)
 
 const Reports = () => {
   const [stats, setStats] = useState(null)
   const [staffPerformance, setStaffPerformance] = useState([])
+  const [taskTrends, setTaskTrends] = useState([])
   const [loading, setLoading] = useState(true)
   const [start, setStart] = useState("")
   const [end, setEnd] = useState("")
@@ -30,11 +56,24 @@ const Reports = () => {
 
       setStats(statsResponse.data)
       setStaffPerformance(staffResponse.data)
+      
+      // Generate mock trend data based on real stats
+      generateTaskTrends(statsResponse.data)
     } catch (error) {
       console.error("Error fetching reports data:", error)
     } finally {
       setLoading(false)
     }
+  }
+
+  const generateTaskTrends = (stats) => {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    const baseRate = stats?.taskCompletionRate || 75
+    const trends = days.map((day, index) => ({
+      day,
+      completion: Math.max(30, Math.min(100, baseRate + (Math.random() - 0.5) * 20))
+    }))
+    setTaskTrends(trends)
   }
 
   const exportCSV = async () => {
@@ -57,27 +96,165 @@ const Reports = () => {
     }
   }
 
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top',
+        labels: {
+          font: {
+            family: 'Poppins',
+            size: 12,
+          }
+        }
+      },
+      title: {
+        display: false,
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: {
+          color: 'rgba(0, 0, 0, 0.1)',
+        },
+        ticks: {
+          font: {
+            family: 'Inter',
+          }
+        }
+      },
+      x: {
+        grid: {
+          display: false,
+        },
+        ticks: {
+          font: {
+            family: 'Inter',
+          }
+        }
+      }
+    }
+  }
+
+  const taskTrendData = {
+    labels: taskTrends.map(t => t.day),
+    datasets: [
+      {
+        label: 'Task Completion %',
+        data: taskTrends.map(t => t.completion),
+        borderColor: '#16a34a',
+        backgroundColor: 'rgba(22, 163, 74, 0.1)',
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: '#16a34a',
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
+        pointRadius: 6,
+      },
+    ],
+  }
+
+  const taskDistributionData = {
+    labels: ['Feeding', 'Health Checks', 'Maintenance', 'Cleaning', 'Other'],
+    datasets: [
+      {
+        data: [35, 25, 20, 15, 5],
+        backgroundColor: [
+          '#22c55e',
+          '#3b82f6',
+          '#f59e0b',
+          '#8b5cf6',
+          '#ef4444',
+        ],
+        borderColor: [
+          '#16a34a',
+          '#2563eb',
+          '#d97706',
+          '#7c3aed',
+          '#dc2626',
+        ],
+        borderWidth: 2,
+      },
+    ],
+  }
+
+  const staffPerformanceChartData = {
+    labels: staffPerformance.slice(0, 5).map(staff => staff.full_name.split(' ')[0]),
+    datasets: [
+      {
+        label: 'Tasks Completed',
+        data: staffPerformance.slice(0, 5).map(staff => staff.tasks_completed || 0),
+        backgroundColor: 'rgba(22, 163, 74, 0.8)',
+        borderColor: '#16a34a',
+        borderWidth: 2,
+        borderRadius: 8,
+        borderSkipped: false,
+      },
+      {
+        label: 'Efficiency %',
+        data: staffPerformance.slice(0, 5).map(staff => staff.efficiency || 0),
+        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+        borderColor: '#3b82f6',
+        borderWidth: 2,
+        borderRadius: 8,
+        borderSkipped: false,
+      },
+    ],
+  }
+
+  const doughnutOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          padding: 20,
+          font: {
+            family: 'Inter',
+            size: 11,
+          }
+        }
+      },
+    },
+    cutout: '60%',
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-6">
+    <div className="space-y-8 max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Reports & Analytics</h1>
-          <p className="text-gray-600 mt-1">Comprehensive insights into farm operations and performance</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Reports & Analytics</h1>
+          <p className="text-gray-600">Comprehensive insights into farm operations and performance</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <input type="date" className="border border-gray-300 rounded-xl px-3 py-2 text-sm" value={start} onChange={(e) => setStart(e.target.value)} />
-          <input type="date" className="border border-gray-300 rounded-xl px-3 py-2 text-sm" value={end} onChange={(e) => setEnd(e.target.value)} />
-          <button onClick={fetchReportsData} className="btn-secondary text-sm">Apply</button>
+        <div className="flex flex-wrap items-center gap-3">
+          <input 
+            type="date" 
+            className="input-field !py-2 text-sm w-auto" 
+            value={start} 
+            onChange={(e) => setStart(e.target.value)} 
+          />
+          <input 
+            type="date" 
+            className="input-field !py-2 text-sm w-auto" 
+            value={end} 
+            onChange={(e) => setEnd(e.target.value)} 
+          />
+          <button onClick={fetchReportsData} className="btn-secondary text-sm">
+            Apply Filters
+          </button>
           <button onClick={exportCSV} className="btn-primary text-sm flex items-center space-x-2">
             <Download className="w-4 h-4" />
             <span>Export Report</span>
@@ -85,239 +262,208 @@ const Reports = () => {
         </div>
       </div>
 
-  {/* Stats Cards */}
-  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-        <div className="card">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-              <Activity className="w-6 h-6 text-green-600" />
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="card-enhanced">
+          <div className="flex items-center space-x-4">
+            <div className="w-14 h-14 farm-gradient rounded-xl flex items-center justify-center shadow-lg">
+              <Activity className="w-7 h-7 text-white" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">Task Completion Rate</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.taskCompletionRate || 0}%</p>
-              <p className="text-xs text-green-600">+5.2% vs last week</p>
-              <p className="text-xs text-gray-500">Average completion rate this period</p>
+              <p className="text-sm text-gray-600 font-medium">Task Completion Rate</p>
+              <p className="text-3xl font-bold text-gray-900">{stats?.taskCompletionRate || 0}%</p>
+              <p className="text-xs text-green-600 font-medium">+5.2% vs last week</p>
             </div>
           </div>
         </div>
 
-        <div className="card">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-              <Users className="w-6 h-6 text-blue-600" />
+        <div className="card-enhanced">
+          <div className="flex items-center space-x-4">
+            <div className="w-14 h-14 sky-gradient rounded-xl flex items-center justify-center shadow-lg">
+              <Users className="w-7 h-7 text-white" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">Active Livestock</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.activeLivestock || 0}</p>
-              <p className="text-xs text-green-600">+2.1% vs last period</p>
-              <p className="text-xs text-gray-500">Total healthy livestock count</p>
+              <p className="text-sm text-gray-600 font-medium">Active Livestock</p>
+              <p className="text-3xl font-bold text-gray-900">{stats?.activeLivestock || 0}</p>
+              <p className="text-xs text-blue-600 font-medium">+2.1% vs last period</p>
             </div>
           </div>
         </div>
 
-        <div className="card">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-purple-600" />
+        <div className="card-enhanced">
+          <div className="flex items-center space-x-4">
+            <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center shadow-lg">
+              <TrendingUp className="w-7 h-7 text-white" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">Staff Efficiency</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.staffEfficiency || 0}%</p>
-              <p className="text-xs text-green-600">+3.8% vs last period</p>
-              <p className="text-xs text-gray-500">Average staff productivity score</p>
+              <p className="text-sm text-gray-600 font-medium">Staff Efficiency</p>
+              <p className="text-3xl font-bold text-gray-900">{stats?.staffEfficiency || 0}%</p>
+              <p className="text-xs text-purple-600 font-medium">+3.8% vs last period</p>
             </div>
           </div>
         </div>
 
-        <div className="card">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-orange-600" />
+        <div className="card-enhanced">
+          <div className="flex items-center space-x-4">
+            <div className="w-14 h-14 earth-gradient rounded-xl flex items-center justify-center shadow-lg">
+              <DollarSign className="w-7 h-7 text-white" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">Monthly Revenue</p>
-              <p className="text-2xl font-bold text-gray-900">${stats?.monthlyRevenue || 0}k</p>
-              <p className="text-xs text-green-600">+8.4% vs last period</p>
-              <p className="text-xs text-gray-500">Livestock products revenue</p>
+              <p className="text-sm text-gray-600 font-medium">Monthly Revenue</p>
+              <p className="text-3xl font-bold text-gray-900">${stats?.monthlyRevenue || 0}k</p>
+              <p className="text-xs text-orange-600 font-medium">+8.4% vs last period</p>
             </div>
           </div>
         </div>
       </div>
 
-  {/* Charts Section */}
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Task Completion Trend */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-semibold text-gray-900">Task Completion Trend</h3>
-              <p className="text-sm text-primary-600">Daily task completion rates over the selected period</p>
+        <div className="card-enhanced">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 farm-gradient rounded-lg flex items-center justify-center">
+                <BarChart3 className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Task Completion Trend</h3>
+                <p className="text-sm text-gray-600">Daily completion rates over time</p>
+              </div>
             </div>
           </div>
-
-          {/* Mock Chart */}
-          <div className="h-64 bg-gradient-to-t from-primary-50 to-transparent rounded-xl flex items-end justify-center space-x-2 p-4">
-            <div className="w-8 bg-primary-200 rounded-t" style={{ height: "40%" }}></div>
-            <div className="w-8 bg-primary-300 rounded-t" style={{ height: "60%" }}></div>
-            <div className="w-8 bg-primary-700 rounded-t" style={{ height: "80%" }}></div>
-            <div className="w-8 bg-primary-500 rounded-t" style={{ height: "70%" }}></div>
-            <div className="w-8 bg-primary-600 rounded-t" style={{ height: "90%" }}></div>
-            <div className="w-8 bg-primary-700 rounded-t" style={{ height: "85%" }}></div>
-            <div className="w-8 bg-primary-800 rounded-t" style={{ height: "95%" }}></div>
-          </div>
-          <div className="flex justify-between text-xs text-gray-500 mt-2">
-            <span>Mon</span>
-            <span>Tue</span>
-            <span>Wed</span>
-            <span>Thu</span>
-            <span>Fri</span>
-            <span>Sat</span>
-            <span>Sun</span>
+          <div className="h-80">
+            <Line data={taskTrendData} options={chartOptions} />
           </div>
         </div>
 
         {/* Task Distribution */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-semibold text-gray-900">Task Distribution</h3>
-              <p className="text-sm text-primary-600">Breakdown of tasks by category</p>
-            </div>
-          </div>
-
-          {/* Mock Pie Chart */}
-          <div className="flex items-center justify-center h-64">
-            <div className="relative w-48 h-48">
-              <div
-                className="absolute inset-0 rounded-full"
-                style={{
-                  background: `conic-gradient(
-                  #22c55e 0deg 126deg,
-                  #3b82f6 126deg 216deg,
-                  #f59e0b 216deg 270deg,
-                  #ef4444 270deg 288deg,
-                  #8b5cf6 288deg 360deg
-                )`,
-                }}
-              ></div>
-              <div className="absolute inset-4 bg-white rounded-full flex items-center justify-center">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">100%</div>
-                  <div className="text-sm text-gray-500">Total</div>
-                </div>
+        <div className="card-enhanced">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 sky-gradient rounded-lg flex items-center justify-center">
+                <PieChart className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Task Distribution</h3>
+                <p className="text-sm text-gray-600">Breakdown by task category</p>
               </div>
             </div>
           </div>
-
-          <div className="grid grid-cols-2 gap-4 mt-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="text-sm text-gray-600">Feeding 35%</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-              <span className="text-sm text-gray-600">Health Checks 25%</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-              <span className="text-sm text-gray-600">Maintenance 20%</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <span className="text-sm text-gray-600">Other 5%</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-              <span className="text-sm text-gray-600">Cleaning 15%</span>
-            </div>
+          <div className="h-80">
+            <Doughnut data={taskDistributionData} options={doughnutOptions} />
           </div>
         </div>
       </div>
 
-      {/* Staff Performance */}
-      <div className="card">
+      {/* Staff Performance Chart */}
+      <div className="card-enhanced">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <Users className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Staff Performance Overview</h3>
+              <p className="text-sm text-gray-600">Tasks completed vs efficiency comparison</p>
+            </div>
+          </div>
+        </div>
+        <div className="h-96">
+          <Bar data={staffPerformanceChartData} options={chartOptions} />
+        </div>
+      </div>
+
+      {/* Staff Performance Leaderboard */}
+      <div className="card-enhanced">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="font-semibold text-gray-900">Staff Performance Leaderboard</h3>
-            <p className="text-sm text-primary-600">Top performing staff members {start && end ? `(${start} to ${end})` : '(last 7 days)'}</p>
+            <h3 className="text-lg font-semibold text-gray-900">Staff Performance Leaderboard</h3>
+            <p className="text-sm text-gray-600">Top performing team members {start && end ? `(${start} to ${end})` : '(last 7 days)'}</p>
           </div>
         </div>
 
         <div className="space-y-4">
           {staffPerformance.map((staff, index) => (
-            <div key={staff.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+            <div key={staff.id} className="flex items-center justify-between p-5 bg-gradient-to-r from-gray-50 to-green-50/50 rounded-xl border border-gray-200 hover:shadow-md transition-all duration-200">
               <div className="flex items-center space-x-4">
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-lg ${
                     index === 0
-                      ? "bg-yellow-500"
+                      ? "bg-gradient-to-br from-yellow-400 to-yellow-600"
                       : index === 1
-                        ? "bg-gray-400"
+                        ? "bg-gradient-to-br from-gray-400 to-gray-600"
                         : index === 2
-                          ? "bg-orange-600"
-                          : "bg-gray-300"
+                          ? "bg-gradient-to-br from-orange-400 to-orange-600"
+                          : "bg-gradient-to-br from-gray-300 to-gray-500"
                   }`}
                 >
                   #{index + 1}
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">{staff.full_name}</p>
-                  <p className="text-sm text-primary-600">{staff.role}</p>
+                  <p className="font-semibold text-gray-900">{staff.full_name}</p>
+                  <p className="text-sm text-primary-600 font-medium">{staff.role}</p>
                 </div>
               </div>
 
               <div className="flex items-center space-x-8 text-right">
                 <div>
-                  <p className="text-sm text-gray-600">Tasks Completed</p>
-                  <p className="font-bold text-gray-900">{staff.tasks_completed || 0}</p>
+                  <p className="text-sm text-gray-600 font-medium">Tasks Completed</p>
+                  <p className="text-xl font-bold text-gray-900">{staff.tasks_completed || 0}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Efficiency</p>
-                  <p className="font-bold text-gray-900">{staff.efficiency || 0}%</p>
+                  <p className="text-sm text-gray-600 font-medium">Efficiency</p>
+                  <p className="text-xl font-bold text-primary-600">{staff.efficiency || 0}%</p>
                 </div>
               </div>
             </div>
           ))}
+          {staffPerformance.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+              <p>No staff performance data available for the selected period.</p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* AI Insights */}
-      <div className="card">
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center">
-            <Activity className="w-5 h-5 text-green-600" />
+      <div className="card-enhanced">
+        <div className="flex items-center space-x-3 mb-6">
+          <div className="w-10 h-10 farm-gradient rounded-xl flex items-center justify-center shadow-lg">
+            <Activity className="w-5 h-5 text-white" />
           </div>
-          <h3 className="font-semibold text-gray-900">AI Insights & Recommendations</h3>
+          <h3 className="text-lg font-semibold text-gray-900">AI Insights & Recommendations</h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 bg-pink-50 border border-pink-200 rounded-xl">
-            <div className="flex items-center space-x-2 mb-2">
-              <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
-              <span className="font-medium text-pink-800">Performance Highlight</span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="p-5 bg-gradient-to-br from-emerald-50 to-green-100 border border-emerald-200 rounded-xl">
+            <div className="flex items-center space-x-2 mb-3">
+              <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+              <span className="font-semibold text-emerald-800">Performance Highlight</span>
             </div>
             <p className="text-sm text-gray-700">
-              Task completion rate has improved by 5.2% this week. Sarah Johnson leads with 96% efficiency.
+              Task completion rate has improved by 5.2% this week. {staffPerformance[0]?.full_name || 'Top performer'} leads with {staffPerformance[0]?.efficiency || 96}% efficiency.
             </p>
           </div>
 
-          <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl">
-            <div className="flex items-center space-x-2 mb-2">
-              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-              <span className="font-medium text-orange-800">Attention Required</span>
+          <div className="p-5 bg-gradient-to-br from-orange-50 to-amber-100 border border-orange-200 rounded-xl">
+            <div className="flex items-center space-x-2 mb-3">
+              <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+              <span className="font-semibold text-orange-800">Attention Required</span>
             </div>
             <p className="text-sm text-gray-700">
-              Livestock health checks are 12% behind schedule. Consider reassigning veterinary tasks.
+              Livestock health checks are behind schedule. Consider reassigning veterinary tasks to optimize workflow.
             </p>
           </div>
 
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
-            <div className="flex items-center space-x-2 mb-2">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span className="font-medium text-blue-800">Optimization Tip</span>
+          <div className="p-5 bg-gradient-to-br from-blue-50 to-cyan-100 border border-blue-200 rounded-xl">
+            <div className="flex items-center space-x-2 mb-3">
+              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <span className="font-semibold text-blue-800">Optimization Tip</span>
             </div>
             <p className="text-sm text-gray-700">
-              Morning feeding tasks show highest completion rates. Schedule critical tasks for 6-9 AM.
+              Morning feeding tasks show highest completion rates. Schedule critical tasks for 6-9 AM for optimal results.
             </p>
           </div>
         </div>

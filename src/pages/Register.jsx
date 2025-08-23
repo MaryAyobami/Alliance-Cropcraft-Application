@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import { authAPI } from "../services/api"
+import Logo, { SVGLogo } from "../components/Logo"
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -63,58 +64,7 @@ const Register = () => {
     }
   }
 
-  const CompanyLogo = () => (
-    <div className="relative inline-block">
-      <svg width="80" height="80" viewBox="0 0 80 80" className="animate-logo-glow">
-        {/* Circular background with gradient */}
-        <defs>
-          <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#10b981" />
-            <stop offset="50%" stopColor="#059669" />
-            <stop offset="100%" stopColor="#047857" />
-          </linearGradient>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-            <feMerge> 
-              <feMergeNode in="coloredBlur"/>
-              <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          </filter>
-        </defs>
-        
-        {/* Background circle */}
-        <circle cx="40" cy="40" r="38" fill="url(#logoGradient)" filter="url(#glow)" />
-        
-        {/* Wheat stalks */}
-        <g fill="white" transform="translate(20, 15)">
-          {/* Left wheat stalk */}
-          <path d="M8 45 L10 20 Q10 18 12 18 Q14 18 14 20 L16 45" stroke="white" strokeWidth="2" fill="none"/>
-          <ellipse cx="12" cy="20" rx="3" ry="2" />
-          <ellipse cx="12" cy="24" rx="2.5" ry="1.5" />
-          <ellipse cx="12" cy="28" rx="2" ry="1" />
-          
-          {/* Center wheat stalk */}
-          <path d="M18 50 L20 15 Q20 13 22 13 Q24 13 24 15 L26 50" stroke="white" strokeWidth="2" fill="none"/>
-          <ellipse cx="22" cy="15" rx="3.5" ry="2.5" />
-          <ellipse cx="22" cy="19" rx="3" ry="2" />
-          <ellipse cx="22" cy="23" rx="2.5" ry="1.5" />
-          <ellipse cx="22" cy="27" rx="2" ry="1" />
-          
-          {/* Right wheat stalk */}
-          <path d="M28 45 L30 20 Q30 18 32 18 Q34 18 34 20 L36 45" stroke="white" strokeWidth="2" fill="none"/>
-          <ellipse cx="32" cy="20" rx="3" ry="2" />
-          <ellipse cx="32" cy="24" rx="2.5" ry="1.5" />
-          <ellipse cx="32" cy="28" rx="2" ry="1" />
-        </g>
-        
-        {/* Small leaves */}
-        <g fill="#dcfce7">
-          <ellipse cx="25" cy="35" rx="4" ry="2" transform="rotate(-30 25 35)" />
-          <ellipse cx="55" cy="35" rx="4" ry="2" transform="rotate(30 55 35)" />
-        </g>
-      </svg>
-    </div>
-  )
+
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row relative">
@@ -134,7 +84,7 @@ const Register = () => {
         {/* Company Logo - Top Left */}
         <div className="absolute top-8 left-8 z-20 animate-slide-down">
           <div className="flex items-center space-x-4">
-            <CompanyLogo />
+            <Logo size="48" />
             <div className="text-white">
               <h3 className="text-xl font-bold tracking-wide">Alliance CropCraft</h3>
               <p className="text-sm opacity-90 font-medium">Limited</p>
@@ -285,7 +235,7 @@ const Register = () => {
             {/* Mobile Logo */}
             <div className="text-center mb-6 lg:hidden">
               <div className="flex justify-center mb-4">
-                <CompanyLogo />
+                <Logo size="64" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Alliance CropCraft</h2>
               <p className="text-primary-600 font-medium">Limited</p>
@@ -296,7 +246,7 @@ const Register = () => {
               {/* Desktop Form Header */}
               <div className="text-center mb-6 hidden lg:block">
                 <div className="inline-flex items-center justify-center w-16 h-16 ">
-                    <CompanyLogo />
+                    <Logo size="64" />
                 </div>
                 <h2 className="text-3xl font-bold text-gray-900 animate-slide-down mb-2">Create Account</h2>
               </div>
