@@ -66,8 +66,25 @@ const CreateTaskForm = () => {
     try {
       const res = await tasksAPI.createTask(formData)
       console.log(res.data)
+      
+      // Clear form and show success message
+      setFormData({
+        title: "",
+        description: "",
+        priority: "medium",
+        assigned_to: "",
+        due_date: "",
+        due_time: "",
+        tag: "static",
+        recurrent: true,
+        active_date: ""
+      })
+      
+      // Show success message
+      alert("Task created successfully!")
+      
     } catch (err) {
-      setError("Failed to create task.")
+      setError(err.response?.data?.message || "Failed to create task. Please check all required fields.")
     } finally {
       setLoading(false)
     }

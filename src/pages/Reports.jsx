@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { reportsAPI } from "../services/api"
-import { TrendingUp, Users, DollarSign, Activity, Download, BarChart3, PieChart } from "lucide-react"
+import { TrendingUp, Users, DollarSign, Activity, Download, BarChart3, PieChart, Cow, CheckCircle, AlertCircle, XCircle } from "lucide-react"
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -33,9 +33,11 @@ const Reports = () => {
   const [stats, setStats] = useState(null)
   const [staffPerformance, setStaffPerformance] = useState([])
   const [taskTrends, setTaskTrends] = useState([])
+  const [livestockStats, setLivestockStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [start, setStart] = useState("")
   const [end, setEnd] = useState("")
+  const [activeTab, setActiveTab] = useState("tasks")
 
   useEffect(() => {
     fetchReportsData()
@@ -59,6 +61,7 @@ const Reports = () => {
       
       // Generate mock trend data based on real stats
       generateTaskTrends(statsResponse.data)
+      generateLivestockStats()
     } catch (error) {
       console.error("Error fetching reports data:", error)
     } finally {
@@ -74,6 +77,33 @@ const Reports = () => {
       completion: Math.max(30, Math.min(100, baseRate + (Math.random() - 0.5) * 20))
     }))
     setTaskTrends(trends)
+  }
+
+  const generateLivestockStats = () => {
+    // Mock livestock statistics
+    const stats = {
+      totalLivestock: 156,
+      healthyCount: 142,
+      sickCount: 8,
+      injuredCount: 3,
+      underTreatmentCount: 3,
+      typeDistribution: {
+        'Cattle': 45,
+        'Sheep': 38,
+        'Goat': 32,
+        'Chicken': 25,
+        'Pig': 16
+      },
+      healthTrends: [
+        { month: 'Jan', healthy: 95, sick: 3, injured: 2 },
+        { month: 'Feb', healthy: 93, sick: 4, injured: 3 },
+        { month: 'Mar', healthy: 91, sick: 5, injured: 4 },
+        { month: 'Apr', healthy: 89, sick: 6, injured: 3 },
+        { month: 'May', healthy: 87, sick: 7, injured: 4 },
+        { month: 'Jun', healthy: 85, sick: 8, injured: 3 }
+      ]
+    }
+    setLivestockStats(stats)
   }
 
   const exportCSV = async () => {
@@ -262,8 +292,37 @@ const Reports = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Tab Navigation */}
+      <div className="mb-6 border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab("tasks")}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === "tasks"
+                ? "border-primary-500 text-primary-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            Task Reports
+          </button>
+          <button
+            onClick={() => setActiveTab("livestock")}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === "livestock"
+                ? "border-primary-500 text-primary-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            Livestock Reports
+          </button>
+        </nav>
+      </div>
+
+      {/* Task Reports Content */}
+      {activeTab === "tasks" && (
+        <>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="card-enhanced">
           <div className="flex items-center space-x-4">
             <div className="w-14 h-14 farm-gradient rounded-xl flex items-center justify-center shadow-lg">
@@ -468,6 +527,154 @@ const Reports = () => {
           </div>
         </div>
       </div>
+        </>
+      )}
+
+      {/* Livestock Reports Content */}
+      {activeTab === "livestock" && livestockStats && (
+        <>
+          {/* Livestock Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="card-enhanced">
+              <div className="flex items-center space-x-4">
+                <div className="w-14 h-14 farm-gradient rounded-xl flex items-center justify-center shadow-lg">
+                  <Cow className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Livestock</p>
+                  <p className="text-2xl font-bold text-gray-900">{livestockStats.totalLivestock}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="card-enhanced">
+              <div className="flex items-center space-x-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <CheckCircle className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Healthy</p>
+                  <p className="text-2xl font-bold text-gray-900">{livestockStats.healthyCount}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="card-enhanced">
+              <div className="flex items-center space-x-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-red-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <AlertCircle className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Sick</p>
+                  <p className="text-2xl font-bold text-gray-900">{livestockStats.sickCount}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="card-enhanced">
+              <div className="flex items-center space-x-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <XCircle className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Under Treatment</p>
+                  <p className="text-2xl font-bold text-gray-900">{livestockStats.underTreatmentCount}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Livestock Type Distribution */}
+          <div className="card-enhanced">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                  <PieChart className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Livestock Type Distribution</h3>
+                  <p className="text-sm text-gray-600">Breakdown by animal type</p>
+                </div>
+              </div>
+            </div>
+            <div className="h-80">
+              <Doughnut 
+                data={{
+                  labels: Object.keys(livestockStats.typeDistribution),
+                  datasets: [{
+                    data: Object.values(livestockStats.typeDistribution),
+                    backgroundColor: [
+                      '#22c55e',
+                      '#3b82f6',
+                      '#f59e0b',
+                      '#8b5cf6',
+                      '#ef4444',
+                    ],
+                    borderColor: [
+                      '#16a34a',
+                      '#2563eb',
+                      '#d97706',
+                      '#7c3aed',
+                      '#dc2626',
+                    ],
+                    borderWidth: 2,
+                  }]
+                }} 
+                options={doughnutOptions} 
+              />
+            </div>
+          </div>
+
+          {/* Health Trends Chart */}
+          <div className="card-enhanced">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Health Trends</h3>
+                  <p className="text-sm text-gray-600">Monthly health status overview</p>
+                </div>
+              </div>
+            </div>
+            <div className="h-96">
+              <Line 
+                data={{
+                  labels: livestockStats.healthTrends.map(t => t.month),
+                  datasets: [
+                    {
+                      label: 'Healthy',
+                      data: livestockStats.healthTrends.map(t => t.healthy),
+                      borderColor: '#22c55e',
+                      backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                      fill: true,
+                      tension: 0.4,
+                    },
+                    {
+                      label: 'Sick',
+                      data: livestockStats.healthTrends.map(t => t.sick),
+                      borderColor: '#ef4444',
+                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                      fill: true,
+                      tension: 0.4,
+                    },
+                    {
+                      label: 'Injured',
+                      data: livestockStats.healthTrends.map(t => t.injured),
+                      borderColor: '#f59e0b',
+                      backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                      fill: true,
+                      tension: 0.4,
+                    }
+                  ]
+                }} 
+                options={chartOptions} 
+              />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

@@ -53,13 +53,22 @@ const Register = () => {
     try {
       const { confirmPassword, ...registerData } = formData
       const response = await authAPI.register(registerData)
-      const { token, user } = response.data
-
-      login(token, user)
-      navigate("/dashboard")
+      
+      // Show success message and redirect to email verification
+      setError("")
+      setLoading(false)
+      
+      // Send verification email
+      try {
+        await authAPI.sendEmailVerification(formData.email)
+        alert("Registration successful! Please check your email to verify your account before logging in.")
+        navigate("/login")
+      } catch (verificationError) {
+        alert("Registration successful! However, we couldn't send the verification email. Please contact support.")
+        navigate("/login")
+      }
     } catch (error) {
       setError(error.response?.data?.message || "Registration failed")
-    } finally {
       setLoading(false)
     }
   }

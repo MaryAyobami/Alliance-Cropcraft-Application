@@ -65,6 +65,14 @@ export const reportsAPI = {
   exportReport: (params) => api.get("/reports/export", { params, responseType: "blob" }),
 }
 
+// Livestock API
+export const livestockAPI = {
+  getLivestock: () => api.get("/livestock"),
+  createLivestock: (livestockData) => api.post("/livestock", livestockData),
+  updateLivestock: (id, livestockData) => api.put(`/livestock/${id}`, livestockData),
+  deleteLivestock: (id) => api.delete(`/livestock/${id}`),
+}
+
 export const subscribePush = (subscription) =>
   api.post("/notifications/subscribe", subscription)
 
