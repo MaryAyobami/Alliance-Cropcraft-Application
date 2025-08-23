@@ -8,16 +8,24 @@ const Reports = () => {
   const [stats, setStats] = useState(null)
   const [staffPerformance, setStaffPerformance] = useState([])
   const [loading, setLoading] = useState(true)
+  const [start, setStart] = useState("")
+  const [end, setEnd] = useState("")
 
   useEffect(() => {
     fetchReportsData()
   }, [])
 
   const fetchReportsData = async () => {
+    setLoading(true)
     try {
+      const params = {}
+      if (start && end) {
+        params.start = start
+        params.end = end
+      }
       const [statsResponse, staffResponse] = await Promise.all([
-        reportsAPI.getStats(),
-        reportsAPI.getStaffPerformance(),
+        reportsAPI.getStats(params),
+        reportsAPI.getStaffPerformance(params),
       ])
 
       setStats(statsResponse.data)
@@ -26,6 +34,26 @@ const Reports = () => {
       console.error("Error fetching reports data:", error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const exportCSV = async () => {
+    try {
+      const params = {}
+      if (start && end) {
+        params.start = start
+        params.end = end
+      }
+      const res = await reportsAPI.exportReport(params)
+      const blob = new Blob([res.data], { type: "text/csv" })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = "report.csv"
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error("Export failed:", err)
     }
   }
 
@@ -47,16 +75,10 @@ const Reports = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <select className="border border-gray-300 rounded-xl px-3 py-2 text-sm">
-            <option>Last 7 days</option>
-            <option>Last 30 days</option>
-            <option>Last 90 days</option>
-          </select>
-          <select className="border border-gray-300 rounded-xl px-3 py-2 text-sm">
-            <option>Overview</option>
-            <option>Detailed</option>
-          </select>
-          <button className="btn-primary text-sm flex items-center space-x-2">
+          <input type="date" className="border border-gray-300 rounded-xl px-3 py-2 text-sm" value={start} onChange={(e) => setStart(e.target.value)} />
+          <input type="date" className="border border-gray-300 rounded-xl px-3 py-2 text-sm" value={end} onChange={(e) => setEnd(e.target.value)} />
+          <button onClick={fetchReportsData} className="btn-secondary text-sm">Apply</button>
+          <button onClick={exportCSV} className="btn-primary text-sm flex items-center space-x-2">
             <Download className="w-4 h-4" />
             <span>Export Report</span>
           </button>
@@ -74,7 +96,7 @@ const Reports = () => {
               <p className="text-sm text-gray-600">Task Completion Rate</p>
               <p className="text-2xl font-bold text-gray-900">{stats?.taskCompletionRate || 0}%</p>
               <p className="text-xs text-green-600">+5.2% vs last week</p>
-              <p className="text-xs text-gray-500">Average completion rate this week</p>
+              <p className="text-xs text-gray-500">Average completion rate this period</p>
             </div>
           </div>
         </div>
@@ -87,7 +109,7 @@ const Reports = () => {
             <div>
               <p className="text-sm text-gray-600">Active Livestock</p>
               <p className="text-2xl font-bold text-gray-900">{stats?.activeLivestock || 0}</p>
-              <p className="text-xs text-green-600">+2.1% vs last week</p>
+              <p className="text-xs text-green-600">+2.1% vs last period</p>
               <p className="text-xs text-gray-500">Total healthy livestock count</p>
             </div>
           </div>
@@ -101,7 +123,7 @@ const Reports = () => {
             <div>
               <p className="text-sm text-gray-600">Staff Efficiency</p>
               <p className="text-2xl font-bold text-gray-900">{stats?.staffEfficiency || 0}%</p>
-              <p className="text-xs text-green-600">+3.8% vs last week</p>
+              <p className="text-xs text-green-600">+3.8% vs last period</p>
               <p className="text-xs text-gray-500">Average staff productivity score</p>
             </div>
           </div>
@@ -115,7 +137,7 @@ const Reports = () => {
             <div>
               <p className="text-sm text-gray-600">Monthly Revenue</p>
               <p className="text-2xl font-bold text-gray-900">${stats?.monthlyRevenue || 0}k</p>
-              <p className="text-xs text-green-600">+8.4% vs last week</p>
+              <p className="text-xs text-green-600">+8.4% vs last period</p>
               <p className="text-xs text-gray-500">Livestock products revenue</p>
             </div>
           </div>
@@ -129,7 +151,7 @@ const Reports = () => {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-semibold text-gray-900">Task Completion Trend</h3>
-              <p className="text-sm text-primary-600">Daily task completion rates over the past week</p>
+              <p className="text-sm text-primary-600">Daily task completion rates over the selected period</p>
             </div>
           </div>
 
@@ -217,7 +239,7 @@ const Reports = () => {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="font-semibold text-gray-900">Staff Performance Leaderboard</h3>
-            <p className="text-sm text-primary-600">Top performing staff members this month</p>
+            <p className="text-sm text-primary-600">Top performing staff members {start && end ? `(${start} to ${end})` : '(last 7 days)'}</p>
           </div>
         </div>
 

@@ -39,6 +39,19 @@ const PublicRoute = ({ children }) => {
   return user ? <Navigate to="/dashboard" /> : children
 }
 
+const AdminRoute = ({ children }) => {
+  const { user, loading } = useAuth()
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+      </div>
+    )
+  }
+  if (!user) return <Navigate to="/login" />
+  return (user.role === "Admin" || user.role === "Admin User") ? children : <Navigate to="/dashboard" />
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -106,9 +119,11 @@ function App() {
             path="/reports"
             element={
               <ProtectedRoute>
-                <Layout>
-                  <Reports />
-                </Layout>
+                <AdminRoute>
+                  <Layout>
+                    <Reports />
+                  </Layout>
+                </AdminRoute>
               </ProtectedRoute>
             }
           />

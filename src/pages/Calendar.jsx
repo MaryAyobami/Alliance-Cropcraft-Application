@@ -8,6 +8,7 @@ const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [events, setEvents] = useState([])
   const [showModal, setShowModal] = useState(false)
+  const [editingEvent, setEditingEvent] = useState(null)
   const [loading, setLoading] = useState(true)
   const [newEvent, setNewEvent] = useState({
     title: "",
@@ -17,6 +18,8 @@ const Calendar = () => {
     location: "",
     type: "Task",
     priority: "medium",
+    reminder_minutes: 30,
+    notify: true,
   })
 
   useEffect(() => {
@@ -48,9 +51,33 @@ const Calendar = () => {
         location: "",
         type: "Task",
         priority: "medium",
+        reminder_minutes: 30,
+        notify: true,
       })
     } catch (error) {
       console.error("Error creating event:", error)
+    }
+  }
+
+  const handleUpdateEvent = async (e) => {
+    e.preventDefault()
+    if (!editingEvent) return
+    try {
+      const { id, ...payload } = editingEvent
+      const response = await eventsAPI.updateEvent(id, payload)
+      setEvents(events.map((ev) => (ev.id === id ? response.data : ev)))
+      setEditingEvent(null)
+    } catch (error) {
+      console.error("Error updating event:", error)
+    }
+  }
+
+  const handleDeleteEvent = async (id) => {
+    try {
+      await eventsAPI.deleteEvent(id)
+      setEvents(events.filter((e) => e.id !== id))
+    } catch (error) {
+      console.error("Error deleting event:", error)
     }
   }
 
@@ -193,26 +220,37 @@ const Calendar = () => {
                 return (
                   <div
                     key={index}
-                    className={`min-h-[100px] p-2 border border-gray-100 ${
+                    className={`min-h-[120px] p-2 border border-gray-100 ${
                       day ? "hover:bg-gray-50" : ""
                     } ${isToday ? "bg-primary-50 border-primary-200" : ""}`}
                   >
                     {day && (
                       <>
-                        <div className={`text-sm font-medium mb-1 ${isToday ? "text-primary-600" : "text-gray-900"}`}>
-                          {day}
+                        <div className={`flex items-center justify-between text-sm font-medium mb-1 ${isToday ? "text-primary-600" : "text-gray-900"}`}>
+                          <span>{day}</span>
                         </div>
                         <div className="space-y-1">
-                          {dayEvents.slice(0, 2).map((event) => (
-                            <div
-                              key={event.id}
-                              className="text-xs p-1 bg-primary-100 text-primary-800 rounded truncate"
-                            >
-                              {event.title}
+                          {dayEvents.slice(0, 3).map((event) => (
+                            <div key={event.id} className="text-xs p-1 bg-primary-100 text-primary-800 rounded flex items-center justify-between gap-1">
+                              <span className="truncate">{event.title}</span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  className="text-[10px] px-1 py-0.5 bg-white/70 rounded hover:bg-white"
+                                  onClick={() => setEditingEvent(event)}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  className="text-[10px] px-1 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200"
+                                  onClick={() => handleDeleteEvent(event.id)}
+                                >
+                                  Del
+                                </button>
+                              </div>
                             </div>
                           ))}
-                          {dayEvents.length > 2 && (
-                            <div className="text-xs text-gray-500">+{dayEvents.length - 2} more</div>
+                          {dayEvents.length > 3 && (
+                            <div className="text-xs text-gray-500">+{dayEvents.length - 3} more</div>
                           )}
                         </div>
                       </>
@@ -350,6 +388,30 @@ const Calendar = () => {
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Reminder (minutes before)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="input-field"
+                    value={newEvent.reminder_minutes}
+                    onChange={(e) => setNewEvent({ ...newEvent, reminder_minutes: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="flex items-end">
+                  <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      className="rounded"
+                      checked={newEvent.notify}
+                      onChange={(e) => setNewEvent({ ...newEvent, notify: e.target.checked })}
+                    />
+                    Send notification
+                  </label>
+                </div>
+              </div>
+
               <div className="flex space-x-3 pt-4">
                 <button type="submit" className="btn-primary flex-1">
                   Create Event
@@ -357,6 +419,132 @@ const Calendar = () => {
                 <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">
                   Cancel
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Event Modal */}
+      {editingEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Edit Event</h3>
+              <button onClick={() => setEditingEvent(null)} className="p-1 hover:bg-gray-100 rounded">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateEvent} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                <input
+                  type="text"
+                  required
+                  className="input-field"
+                  value={editingEvent.title}
+                  onChange={(e) => setEditingEvent({ ...editingEvent, title: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                  <input
+                    type="date"
+                    required
+                    className="input-field"
+                    value={editingEvent.event_date}
+                    onChange={(e) => setEditingEvent({ ...editingEvent, event_date: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Time *</label>
+                  <input
+                    type="time"
+                    required
+                    className="input-field"
+                    value={editingEvent.event_time}
+                    onChange={(e) => setEditingEvent({ ...editingEvent, event_time: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  className="input-field"
+                  rows="3"
+                  value={editingEvent.description || ""}
+                  onChange={(e) => setEditingEvent({ ...editingEvent, description: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                  <select
+                    className="input-field"
+                    value={editingEvent.type}
+                    onChange={(e) => setEditingEvent({ ...editingEvent, type: e.target.value })}
+                  >
+                    <option value="Task">Task</option>
+                    <option value="Event">Event</option>
+                    <option value="Meeting">Meeting</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                  <select
+                    className="input-field"
+                    value={editingEvent.priority}
+                    onChange={(e) => setEditingEvent({ ...editingEvent, priority: e.target.value })}
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={editingEvent.location || ""}
+                  onChange={(e) => setEditingEvent({ ...editingEvent, location: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Reminder (minutes before)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="input-field"
+                    value={editingEvent.reminder_minutes || 0}
+                    onChange={(e) => setEditingEvent({ ...editingEvent, reminder_minutes: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="flex items-end">
+                  <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      className="rounded"
+                      checked={!!editingEvent.notify}
+                      onChange={(e) => setEditingEvent({ ...editingEvent, notify: e.target.checked })}
+                    />
+                    Send notification
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button type="submit" className="btn-primary flex-1">Save</button>
+                <button type="button" onClick={() => setEditingEvent(null)} className="btn-secondary flex-1">Cancel</button>
               </div>
             </form>
           </div>
