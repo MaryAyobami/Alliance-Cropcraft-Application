@@ -162,6 +162,16 @@ function App() {
             }
           />
           <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Settings/>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/reports"
             element={
               <ProtectedRoute>
@@ -172,8 +182,7 @@ function App() {
                 </AdminRoute>
               </ProtectedRoute>
             }
-          />
-          <Route path="/" element={<Navigate to="/dashboard" />} />
+           />
         </Routes>
       </Router>
       <PWAInstallPrompt />

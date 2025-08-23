@@ -19,6 +19,13 @@ const ForgotPassword = () => {
     setLoading(true)
     setError("")
     setMessage("")
+   // Validate email before sending
+
+    if (!email.trim()) {
+      setError("Please enter your email address.")
+      setLoading(false)
+      return
+    }
 
     try {
       await forgotPassword(email)
@@ -33,10 +40,10 @@ const ForgotPassword = () => {
 
   if (emailSent) {
     return (
-      <div className="min-h-screen farm-gradient flex items-center justify-center px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
+      <div className="min-h-screen bg-primary-50 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full bg-farm-50 space-y-8">
           <div className="card-enhanced text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="w-16 h-16 bg-farm-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Check Your Email</h2>
@@ -60,12 +67,12 @@ const ForgotPassword = () => {
   }
 
   return (
-    <div className="min-h-screen farm-gradient flex items-center justify-center px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-primary-100 flex items-center justify-center px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        <div className="card-enhanced">
+        <div className="card-enhanced bg-primary-100">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 earth-gradient rounded-full flex items-center justify-center mx-auto mb-4">
-              <Mail className="w-8 h-8 text-white" />
+            <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Mail className="w-8 h-8 text-green-600" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900">Reset Your Password</h2>
             <p className="mt-2 text-gray-600">
@@ -106,7 +113,7 @@ const ForgotPassword = () => {
 
             <button
               type="submit"
-              disabled={loading || !email}
+              disabled={loading}
               className="btn-primary w-full flex items-center justify-center space-x-2"
             >
               {loading ? (

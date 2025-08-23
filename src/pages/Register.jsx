@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import { authAPI } from "../services/api"
@@ -20,11 +20,25 @@ const Register = () => {
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-
+  const containerRef = useRef(null)
+  const errorRef = useRef(null)
   const { login } = useAuth()
   const navigate = useNavigate()
 
   const roles = ["Farm Attendant", "Veterinary Doctor", "Pasture Manager", "Admin", "Farm Manager", "Maintenance Officer", "Field Production Officer"]
+
+  // Auto-scroll to error when error changes
+  useEffect(() => {
+    if (error && errorRef.current && containerRef.current) {
+      setTimeout(() => {
+        errorRef.current.scrollIntoView({ 
+          behavior: "smooth", 
+          block: "center",
+          inline: "nearest"
+        })
+      }, 100)
+    }
+  }, [error])
 
   const handleChange = (e) => {
     setFormData({
@@ -32,6 +46,13 @@ const Register = () => {
       [e.target.name]: e.target.value,
     })
   }
+
+  // Validation helpers
+  const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  const validatePhone = (phone) => /^\d{10,15}$/.test(phone.replace(/\D/g, "")) // Accepts 10-15 digits
+  const validatePassword = (password) =>
+    password.length >= 8 &&
+    /[0-9!@#$%^&*(),.?":{}|<>]/.test(password) // Must contain a number or symbol
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -46,6 +67,36 @@ const Register = () => {
 
     if (!acceptTerms) {
       setError("Please accept the terms and conditions")
+      setLoading(false)
+      return
+    }
+
+    if (!validateEmail(formData.email)) {
+      setError("Please enter a valid email address")
+      setLoading(false)
+      return
+    }
+
+    if (formData.phone && !validatePhone(formData.phone)) {
+      setError("Please enter a valid phone number (10-15 digits)")
+      setLoading(false)
+      return
+    }
+
+    if (!validatePassword(formData.password)) {
+      setError("Password must be at least 8 characters and contain a number or symbol")
+      setLoading(false)
+      return
+    }
+
+    if (!formData.full_name.trim()) {
+      setError("Full name is required")
+      setLoading(false)
+      return
+    }
+      
+    if (!formData.role) {
+      setError("Please select your role")
       setLoading(false)
       return
     }
@@ -84,10 +135,8 @@ const Register = () => {
     }
   }
 
-
-
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row relative">
+    <div ref={containerRef} className="min-h-screen flex flex-col lg:flex-row relative">
       {/* Left Side - Green Farm Image - Fixed Height */}
       <div className="hidden lg:flex lg:w-3/5 relative overflow-hidden h-screen sticky top-0">
         {/* Green Farm Background Image */}
@@ -113,7 +162,7 @@ const Register = () => {
         </div>
 
         {/* Main Content - Bottom */}
-  <div className="relative z-10 flex flex-col justify-end p-6 lg:p-12 text-white">
+        <div className="relative z-10 flex flex-col justify-end p-6 lg:p-12 text-white">
           <div className="max-w-lg animate-slide-up">
             <div className="mb-6">
               <div className="w-16 h-1 bg-primary-700 mb-4 animate-expand"></div>
@@ -272,7 +321,7 @@ const Register = () => {
               </div>
 
               {error && (
-                <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-400 rounded-r-xl animate-shake">
+                <div ref={errorRef} className="mb-4 p-4 bg-red-50 border-l-4 border-red-400 rounded-r-xl animate-shake">
                   <div className="flex items-center">
                     <svg className="w-5 h-5 text-red-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
@@ -294,7 +343,7 @@ const Register = () => {
                       name="full_name"
                       type="text"
                       required
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 hover:border-primary-300 bg-white/70 backdrop-blur-sm text-gray-900 placeholder-gray-500"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none transition-all duration-300 hover:border-green-300 bg-white/70 backdrop-blur-sm text-gray-900 placeholder-gray-500"
                       placeholder="Enter your full name"
                       value={formData.full_name}
                       onChange={handleChange}
@@ -314,7 +363,7 @@ const Register = () => {
                       name="email"
                       type="email"
                       required
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 hover:border-primary-300 bg-white/70 backdrop-blur-sm text-gray-900 placeholder-gray-500"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none transition-all duration-300 hover:border-green-300 bg-white/70 backdrop-blur-sm text-gray-900 placeholder-gray-500"
                       placeholder="Enter your email address"
                       value={formData.email}
                       onChange={handleChange}
@@ -333,7 +382,7 @@ const Register = () => {
                       id="phone"
                       name="phone"
                       type="tel"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 hover:border-primary-300 bg-white/70 backdrop-blur-sm text-gray-900 placeholder-gray-500"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none transition-all duration-300 hover:border-green-300 bg-white/70 backdrop-blur-sm text-gray-900 placeholder-gray-500"
                       placeholder="Enter your phone number"
                       value={formData.phone}
                       onChange={handleChange}
@@ -352,7 +401,7 @@ const Register = () => {
                       id="role"
                       name="role"
                       required
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 hover:border-primary-300 bg-white/70 backdrop-blur-sm text-gray-900 appearance-none"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none transition-all duration-300 hover:border-green-300 bg-white/70 backdrop-blur-sm text-gray-900 appearance-none"
                       value={formData.role}
                       onChange={handleChange}
                     >
@@ -381,7 +430,7 @@ const Register = () => {
                       name="password"
                       type={showPassword ? "text" : "password"}
                       required
-                      className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 hover:border-primary-300 bg-white/70 backdrop-blur-sm text-gray-900 placeholder-gray-500"
+                      className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none transition-all duration-300 hover:border-green-300 bg-white/70 backdrop-blur-sm text-gray-900 placeholder-gray-500"
                       placeholder="Create a strong password"
                       value={formData.password}
                       onChange={handleChange}
@@ -416,7 +465,7 @@ const Register = () => {
                       name="confirmPassword"
                       type={showConfirmPassword ? "text" : "password"}
                       required
-                      className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 hover:border-primary-300 bg-white/70 backdrop-blur-sm text-gray-900 placeholder-gray-500"
+                      className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none transition-all duration-300 hover:border-green-300 bg-white/70 backdrop-blur-sm text-gray-900 placeholder-gray-500"
                       placeholder="Confirm your password"
                       value={formData.confirmPassword}
                       onChange={handleChange}
@@ -446,17 +495,17 @@ const Register = () => {
                     <input
                       id="acceptTerms"
                       type="checkbox"
-                      className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded transition-colors duration-200"
+                      className="mt-1 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded transition-colors duration-200"
                       checked={acceptTerms}
                       onChange={(e) => setAcceptTerms(e.target.checked)}
                     />
                     <label htmlFor="acceptTerms" className="text-sm text-gray-700 leading-relaxed">
                       I agree to the{" "}
-                      <a href="#" className="text-primary-600 hover:text-primary-700 font-medium underline">
+                      <a href="#" className="text-green-600 hover:text-green-700 font-medium underline">
                         Terms and Conditions
                       </a>{" "}
                       and{" "}
-                      <a href="#" className="text-primary-600 hover:text-primary-700 font-medium underline">
+                      <a href="#" className="text-green-600 hover:text-green-700 font-medium underline">
                         Privacy Policy
                       </a>
                     </label>
@@ -467,7 +516,7 @@ const Register = () => {
                 <button 
                   type="submit" 
                   disabled={loading} 
-                  className="w-full bg-gradient-to-r from-primary-600 via-primary-500 to-teal-600 hover:from-primary-700 hover:via-primary-600 hover:to-teal-700 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 hover:shadow-xl active:scale-95 animate-slide-up delay-1000 shadow-lg mt-6"
+                  className="w-full bg-gradient-to-r from-green-600 via-green-500 to-teal-600 hover:from-green-700 hover:via-green-600 hover:to-teal-700 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 hover:shadow-xl active:scale-95 animate-slide-up delay-1000 shadow-lg mt-6"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center">
@@ -492,7 +541,7 @@ const Register = () => {
                 </p>
                 <Link 
                   to="/login" 
-                  className="inline-flex items-center px-6 py-3 border-2 border-primary-600 text-primary-600 hover:bg-primary-600 hover:text-white font-semibold rounded-2xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg active:scale-95"
+                  className="inline-flex items-center px-6 py-3 border-2 border-green-600 text-green-600 hover:bg-green-600 hover:text-white font-semibold rounded-2xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg active:scale-95"
                 >
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
@@ -589,8 +638,6 @@ const Register = () => {
         .shadow-3xl {
           box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         }
-
-        /* Remove the margin-left override */
       `}</style>
     </div>
   )

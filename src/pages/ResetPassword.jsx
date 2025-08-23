@@ -82,11 +82,11 @@ const ResetPassword = () => {
 
   if (validToken === false) {
     return (
-      <div className="min-h-screen farm-gradient flex items-center justify-center px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div className="card-enhanced text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Lock className="w-8 h-8 text-red-600" />
+            <div className="w-16 h-16 bg-earth-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Lock className="w-8 h-8 text-earth-600" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Invalid Reset Link</h2>
             <p className="text-gray-600 mb-6">
@@ -106,11 +106,11 @@ const ResetPassword = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen farm-gradient flex items-center justify-center px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-primary-50 flex items-center justify-center px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div className="card-enhanced text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle className="w-8 h-8 text-green-600" />
+            <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle className="w-8 h-8 text-primary-700" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Password Reset Successful</h2>
             <p className="text-gray-600 mb-6">
@@ -130,12 +130,12 @@ const ResetPassword = () => {
   }
 
   return (
-    <div className="min-h-screen farm-gradient flex items-center justify-center px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-primary-50 flex items-center justify-center px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="card-enhanced">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 farm-gradient rounded-full flex items-center justify-center mx-auto mb-4">
-              <Lock className="w-8 h-8 text-white" />
+            <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Lock className="w-8 h-8 text-primary-700" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900">Create New Password</h2>
             <p className="mt-2 text-gray-600">
@@ -212,7 +212,7 @@ const ResetPassword = () => {
 
             <button
               type="submit"
-              disabled={loading || !passwords.newPassword || !passwords.confirmPassword}
+              disabled={loading}
               className="btn-primary w-full flex items-center justify-center space-x-2"
             >
               {loading ? (

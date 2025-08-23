@@ -32,15 +32,16 @@ const Dashboard = () => {
       try {
         // Farm location in Ilorin, Oyo State, Nigeria
         const farmLocation = {
-          lat: 8.4799,
-          lon: 4.5418,
+          lat: 7.7883,
+          lon: 3.9190,
           name: "Alliance CropCraft Farm"
         }
         
         const response = await fetch(
-          `https://api.openweathermap.org/data/2.5/weather?lat=${farmLocation.lat}&lon=${farmLocation.lon}&appid=YOUR_API_KEY&units=metric`
+          `https://api.openweathermap.org/data/2.5/weather?lat=${farmLocation.lat}&lon=${farmLocation.lon}&appid=f4d6cec31b04951c0ac2ac398f1a3c40&units=metric`
         )
         
+        console.log(response)
         if (response.ok) {
           const data = await response.json()
           setWeather({
@@ -168,7 +169,7 @@ const Dashboard = () => {
   return (
     <div className="space-y-8 max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-6">
       {/* Hero Section with Weather Integration */}
-  <div className="relative bg-gradient-to-br from-primary-700 via-primary-600 to-primary-500 rounded-2xl p-4 sm:p-8 text-white overflow-hidden">
+  <div className="relative bg-gradient-to-br from-primary-800 via-primary-700 to-primary-500 rounded-2xl p-4 sm:p-8 text-white overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 bg-black bg-opacity-10">
           <div className="absolute inset-0" style={{
@@ -181,20 +182,20 @@ const Dashboard = () => {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-0">
             {/* Welcome Section */}
             <div className="flex-1">
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">
+              <h1 className="text-2xl sm:text-2xl lg:text-4xl font-bold mb-2">
                 {getGreeting()}, {user?.full_name}!
               </h1>
-              <p className="text-white text-base sm:text-lg mb-4">
+              <p className="text-white text-base sm:text-md mb-4">
                 You have {stats?.pendingTasks || 0} pending tasks today
               </p>
               <div className="flex flex-wrap items-center gap-4 sm:gap-8">
                 <div>
-                  <div className="text-3xl font-bold">{stats?.completedTasks || "0/0"}</div>
+                  <div className="text-3xl sm:text-2xl font-bold">{stats?.completedTasks || "0/0"}</div>
                   <p className="text-white text-sm">Tasks Completed</p>
                 </div>
                 <div className="hidden sm:block h-12 w-px bg-blue-300 opacity-50"></div>
                 <div>
-                  <div className="text-3xl font-bold">{stats?.completionRate || 0}%</div>
+                  <div className="text-3xl sm:text-2xl font-bold">{stats?.completionRate || 0}%</div>
                   <p className="text-white text-sm">Success Rate</p>
                 </div>
               </div>
@@ -202,12 +203,12 @@ const Dashboard = () => {
 
             {/* Weather Section */}
             {weather && (
-              <div className="lg:text-right">
+              <div className="hidden sm:block lg:text-right">
                 <div className="flex flex-row items-center gap-4 lg:flex-col lg:items-end lg:gap-0 lg:space-y-2">
-                  <WeatherIcon className="w-16 h-16 text-white opacity-90" />
+                  <WeatherIcon className="w-16 h-16 sm:w-12 sm:h-12 md:w-12 md:h-12 text-white opacity-90" />
                   <div>
-                    <div className="text-2xl sm:text-4xl font-bold">{weather.temperature}°C</div>
-                    <p className="text-white capitalize text-lg">{weather.description}</p>
+                    <div className="text-2xl sm:text-2xl font-bold">{weather.temperature}°C</div>
+                    <p className="text-white capitalize text-lg sm:text-sm">{weather.description}</p>
                     <div className="flex items-center justify-end space-x-1 mt-2 text-white">
                       <MapPin className="w-4 h-4" />
                       <span className="text-sm">{weather.location}</span>
@@ -219,7 +220,21 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-
+{/* {weather && (
+  <div className="block sm:hidden bg-gradient-to-br from-farm-700 via-farm-700 to-farm-500 rounded-2xl p-4 text-white mb-4">
+    <div className="flex items-center gap-4">
+      <WeatherIcon className="w-10 h-10 text-white opacity-90" />
+      <div>
+        <div className="text-xl font-bold">{weather.temperature}°C</div>
+        <p className="text-white capitalize text-md">{weather.description}</p>
+        <div className="flex items-center space-x-1 mt-2 text-white">
+          <MapPin className="w-4 h-4" />
+          <span className="text-sm">{weather.location}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+)} */}
       {/* Stats Overview */}
   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
         <div className="card group hover:shadow-lg transition-all duration-300">

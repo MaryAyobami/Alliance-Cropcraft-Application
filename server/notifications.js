@@ -336,6 +336,72 @@ class SimpleNotifications {
         }
     }
 
+    // Send password reset email
+    static async sendPasswordResetEmail(user, resetToken) {
+        const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${resetToken}`;
+        const mailOptions = {
+            from: process.env.EMAIL_USER || 'ogunmolamaryayobami@gmail.com',
+            to: user.email,
+            subject: 'Reset Your Password - Alliance CropCraft',
+            html: `
+                <div style="max-width:600px;margin:0 auto;padding:20px;font-family:Arial,sans-serif;background-color:#f9f9f9;">
+                    <div style="background:linear-gradient(135deg,#f59e42 0%,#f97316 100%);padding:30px;text-align:center;color:white;border-radius:10px 10px 0 0;">
+                        <h1 style="margin:0;font-size:24px;">Alliance CropCraft</h1>
+                        <p style="margin:10px 0 0 0;opacity:0.9;">Password Reset Request</p>
+                    </div>
+                    <div style="background:white;padding:30px;border-radius:0 0 10px 10px;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+                        <h2 style="color:#374151;margin-bottom:20px;">Hi ${user.full_name || user.name},</h2>
+                        <p style="color:#6b7280;line-height:1.6;margin-bottom:20px;">
+                            We received a request to reset your password. Click the button below to set a new password. If you did not request this, you can safely ignore this email.
+                        </p>
+                        <div style="text-align:center;margin:30px 0;">
+                            <a href="${resetUrl}" 
+                               style="background:linear-gradient(135deg,#f59e42 0%,#f97316 100%);
+                                      color:white;
+                                      padding:15px 30px;
+                                      text-decoration:none;
+                                      border-radius:8px;
+                                      font-weight:bold;
+                                      display:inline-block;
+                                      box-shadow:0 4px 6px rgba(245,158,66,0.3);">
+                                Reset My Password
+                            </a>
+                        </div>
+                        <div style="background:#f3f4f6;padding:20px;border-radius:8px;margin:20px 0;">
+                            <p style="color:#6b7280;margin:0;font-size:14px;">
+                                <strong>Can't click the button?</strong><br>
+                                Copy and paste this link into your browser:<br>
+                                <span style="word-break:break-all;color:#f59e42;">${resetUrl}</span>
+                            </p>
+                        </div>
+                        <div style="border-top:1px solid #e5e7eb;padding-top:20px;margin-top:30px;">
+                            <p style="color:#9ca3af;font-size:12px;margin:0;">
+                                This password reset link will expire in 1 hour for security reasons.<br>
+                                If you didn't request this, please ignore this email.
+                            </p>
+                        </div>
+                        <div style="text-align:center;margin-top:20px;">
+                            <p style="color:#6b7280;font-size:14px;margin:0;">
+                                Best regards,<br>
+                                <strong style="color:#f59e42;">The Alliance CropCraft Team</strong>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `
+        };
+
+        try {
+            await emailer.sendMail(mailOptions);
+            console.log(`✅ Password reset email sent to ${user.email}`);
+        } catch (error) {
+            console.error(`❌ Failed to send password reset email to ${user.email}:`, error);
+            throw error;
+        }
+    }
+
+
+// ...existing exports...
     // Send task assignment notification
     static async sendTaskAssignment(assignedUser, createdByUser, task) {
         const mailOptions = {

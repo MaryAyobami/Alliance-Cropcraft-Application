@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import { authAPI } from "../services/api"
@@ -14,9 +14,23 @@ const Login = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [showPassword, setShowPassword] = useState(false)
-
+  const containerRef = useRef(null)
+  const errorRef = useRef(null)
   const { login } = useAuth()
   const navigate = useNavigate()
+
+  // Auto-scroll to error when error changes
+  useEffect(() => {
+    if (error && errorRef.current && containerRef.current) {
+      setTimeout(() => {
+        errorRef.current.scrollIntoView({ 
+          behavior: "smooth", 
+          block: "center",
+          inline: "nearest"
+        })
+      }, 100)
+    }
+  }, [error])
 
   const handleChange = (e) => {
     setFormData({
@@ -50,6 +64,7 @@ const Login = () => {
       } else if (errorData?.field) {
         // Handle field-specific errors
         setError(errorData.message)
+        
       } else {
         setError(errorData?.message || "Login failed")
       }
@@ -58,10 +73,8 @@ const Login = () => {
     }
   }
 
-
-
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row relative">
+    <div ref={containerRef} className="min-h-screen flex flex-col lg:flex-row relative">
       {/* Left Side - Green Farm Image */}
       <div className="hidden lg:flex lg:w-3/5 relative overflow-hidden h-screen sticky top-0">
         {/* Green Farm Background Image */}
@@ -87,7 +100,7 @@ const Login = () => {
         </div>
 
         {/* Main Content - Bottom */}
-  <div className="relative z-10 flex flex-col justify-end p-6 lg:p-12 text-white">
+        <div className="relative z-10 flex flex-col justify-end p-6 lg:p-12 text-white">
           <div className="max-w-lg animate-slide-up">
             <div className="mb-6">
               <div className="w-16 h-1 bg-primary-700 mb-4 animate-expand"></div>
@@ -243,11 +256,11 @@ const Login = () => {
                   <Logo size="64" />
                 </div>
                 <h2 className="text-3xl font-bold text-gray-900 animate-slide-down mb-2">Sign In</h2>
-                <p className="text-primary-600 font-medium animate-slide-down delay-200">Access your dashboard</p>
+                <p className="text-green-600 font-medium animate-slide-down delay-200">Access your dashboard</p>
               </div>
 
               {error && (
-                <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-400 rounded-r-xl animate-shake">
+                <div ref={errorRef} className="mb-6 p-4 bg-red-50 border-l-4 border-red-400 rounded-r-xl animate-shake">
                   <div className="flex items-center">
                     <svg className="w-5 h-5 text-red-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
@@ -268,7 +281,7 @@ const Login = () => {
                       name="email"
                       type="email"
                       required
-                      className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 hover:border-primary-300 bg-white/70 backdrop-blur-sm text-gray-900 placeholder-gray-500"
+                      className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none transition-all duration-300 hover:border-green-300 bg-white/70 backdrop-blur-sm text-gray-900 placeholder-gray-500"
                       placeholder="Enter your email address"
                       value={formData.email}
                       onChange={handleChange}
@@ -286,7 +299,7 @@ const Login = () => {
                       name="password"
                       type={showPassword ? "text" : "password"}
                       required
-                      className="w-full px-4 py-4 pr-12 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 hover:border-primary-300 bg-white/70 backdrop-blur-sm text-gray-900 placeholder-gray-500"
+                      className="w-full px-4 py-4 pr-12 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none transition-all duration-300 hover:border-green-300 bg-white/70 backdrop-blur-sm text-gray-900 placeholder-gray-500"
                       placeholder="Enter your password"
                       value={formData.password}
                       onChange={handleChange}
@@ -313,7 +326,7 @@ const Login = () => {
                 <button 
                   type="submit" 
                   disabled={loading} 
-                  className="w-full bg-gradient-to-r from-primary-600 via-primary-500 to-teal-600 hover:from-primary-700 hover:via-primary-600 hover:to-teal-700 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 hover:shadow-xl active:scale-95 animate-slide-up delay-700 shadow-lg"
+                  className="w-full bg-gradient-to-r from-green-600 via-green-500 to-teal-600 hover:from-green-700 hover:via-green-600 hover:to-teal-700 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 hover:shadow-xl active:scale-95 animate-slide-up delay-700 shadow-lg"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center">
@@ -334,7 +347,7 @@ const Login = () => {
               <div className="mt-6 text-center animate-slide-up delay-800">
                 <Link 
                   to="/forgot-password" 
-                  className="text-sm text-primary-600 hover:text-primary-700 font-medium transition-colors"
+                  className="text-sm text-green-600 hover:text-green-700 font-medium transition-colors"
                 >
                   Forgot your password?
                 </Link>
@@ -346,7 +359,7 @@ const Login = () => {
                 </p>
                 <Link 
                   to="/register" 
-                  className="inline-flex items-center px-6 py-3 border-2 border-primary-600 text-primary-600 hover:bg-primary-600 hover:text-white font-semibold rounded-2xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg active:scale-95"
+                  className="inline-flex items-center px-6 py-3 border-2 border-green-600 text-green-600 hover:bg-green-600 hover:text-white font-semibold rounded-2xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg active:scale-95"
                 >
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
@@ -422,7 +435,6 @@ const Login = () => {
         .animate-float { animation: float 6s ease-in-out infinite; }
         .animate-float-reverse { animation: float-reverse 8s ease-in-out infinite; }
         .animate-pulse-slow { animation: pulse-slow 4s ease-in-out infinite; }
-        .animate-logo-glow { animation: logo-glow 3s ease-in-out infinite; }
         .animate-shake { animation: shake 0.6s ease-in-out; }
         
         .delay-100 { animation-delay: 0.1s; }

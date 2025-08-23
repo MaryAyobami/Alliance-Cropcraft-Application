@@ -516,31 +516,44 @@ app.post("/api/auth/verify-email", async (req, res) => {
   }
 })
 
-// Forgot password endpoint
+// ...existing imports and setup...
+
+// --- Forgot password endpoint ---
 app.post("/api/auth/forgot-password", async (req, res) => {
   try {
     const { email } = req.body
-    
-    if (!email) {
-      return res.status(400).json({ message: "Email is required" })
-    }
-    
-    // Check if user exists
-    const userResult = await queryWithRetry("SELECT * FROM users WHERE email = $1", [email])
+    if (!email) return res.status(400).json({ message: "Email is required" })
+
+    // Find user
+    const userResult = await pool.query("SELECT id, email, full_name FROM users WHERE email = $1", [email])
     if (userResult.rows.length === 0) {
-      // Don't reveal if user exists for security
+      // Don't reveal if user exists
       return res.json({ message: "If an account with this email exists, a password reset link has been sent." })
     }
-    
-    // Generate reset token
+    const user = userResult.rows[0]
+
+    // Generate token
     const crypto = require('crypto')
     const resetToken = crypto.randomBytes(32).toString('hex')
-    const resetTokenExpiry = new Date(Date.now() + 3600000) // 1 hour from now
-    
-    // Store token in database (you may want to create a password_reset_tokens table)
-    // For now, we'll just simulate success
-    console.log(`Password reset email would be sent to ${email} with token: ${resetToken}`)
-    
+    const expiresAt = new Date(Date.now() + 3600000) // 1 hour
+
+    // Store token and expiry in users table
+    await pool.query(
+      "UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE id = $3",
+      [resetToken, expiresAt, user.id]
+    )
+
+    // Send email (implement your own email logic)
+    if (notificationSystem) {
+      try {
+        await notificationSystem.SimpleNotifications.sendPasswordResetEmail(user, resetToken)
+      } catch (emailError) {
+        console.error('Failed to send password reset email:', emailError)
+      }
+    } else {
+      console.log(`Password reset link for ${email}: https://your-app.com/reset-password?token=${resetToken}`)
+    }
+
     res.json({ message: "If an account with this email exists, a password reset link has been sent." })
   } catch (error) {
     console.error("Forgot password error:", error)
@@ -548,37 +561,45 @@ app.post("/api/auth/forgot-password", async (req, res) => {
   }
 })
 
-// Reset password endpoint
+// --- Reset password endpoint ---
 app.post("/api/auth/reset-password", async (req, res) => {
   try {
     const { token, newPassword } = req.body
-    
     if (!token || !newPassword) {
       return res.status(400).json({ message: "Token and new password are required" })
     }
-    
-    if (newPassword.length < 6) {
-      return res.status(400).json({ message: "Password must be at least 6 characters long" })
+    if (newPassword.length < 8 || !/[0-9!@#$%^&*(),.?":{}|<>]/.test(newPassword)) {
+      return res.status(400).json({ message: "Password must be at least 8 characters and contain a number or symbol" })
     }
-    
-    // Here you would verify the token and update the user's password
-    // For demo purposes, we'll just simulate success
-    console.log(`Password reset attempted with token: ${token}`)
-    
-    // Hash the new password
-    const password_hash = await bcrypt.hash(newPassword, 10)
-    
-    // In a real implementation, you would:
-    // 1. Verify the token exists and hasn't expired
-    // 2. Update the user's password
-    // 3. Delete the reset token
-    
+
+    // Find user by token
+    const userResult = await pool.query(
+      "SELECT id, reset_token_expires FROM users WHERE reset_token = $1",
+      [token]
+    )
+    if (userResult.rows.length === 0) {
+      return res.status(400).json({ message: "Invalid or expired token" })
+    }
+    const user = userResult.rows[0]
+    if (new Date(user.reset_token_expires) < new Date()) {
+      return res.status(400).json({ message: "Token has expired" })
+    }
+
+    // Update password and clear token
+    const password_hash = await bcrypt.hash(newPassword, 12)
+    await pool.query(
+      "UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL WHERE id = $2",
+      [password_hash, user.id]
+    )
+
     res.json({ message: "Password reset successfully" })
   } catch (error) {
     console.error("Reset password error:", error)
     res.status(500).json({ message: "Server error" })
   }
 })
+
+// ...rest of your server code...
 
 // Dashboard routes
 app.get("/api/dashboard/stats", authenticateToken, async (req, res) => {
