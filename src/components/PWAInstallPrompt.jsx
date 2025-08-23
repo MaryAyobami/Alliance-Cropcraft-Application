@@ -1,38 +1,102 @@
-import React, { useEffect, useState } from "react"
+import React, { useState, useEffect } from 'react'
+import { Download } from 'lucide-react'
 
 const PWAInstallPrompt = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null)
-  const [showPrompt, setShowPrompt] = useState(false)
+  const [showInstall, setShowInstall] = useState(false)
+  const [isInstalled, setIsInstalled] = useState(false)
 
   useEffect(() => {
-    window.addEventListener("beforeinstallprompt", (e) => {
+    // Check if app is already installed
+    const checkInstalled = () => {
+      // Check if running in standalone mode (installed PWA)
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        setIsInstalled(true)
+        return
+      }
+      
+      // Check if running as PWA on iOS
+      if (window.navigator.standalone === true) {
+        setIsInstalled(true)
+        return
+      }
+    }
+
+    checkInstalled()
+
+    // Listen for beforeinstallprompt event
+    const handleBeforeInstallPrompt = (e) => {
+      console.log('beforeinstallprompt event fired')
+      
+      // Prevent Chrome 67 and earlier from automatically showing the prompt
       e.preventDefault()
+      
+      // Stash the event so it can be triggered later
       setDeferredPrompt(e)
-      setShowPrompt(true)
-    })
+      setShowInstall(true)
+    }
+
+    // Listen for app installed event
+    const handleAppInstalled = (evt) => {
+      console.log('PWA was installed')
+      setShowInstall(false)
+      setIsInstalled(true)
+      setDeferredPrompt(null)
+    }
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    window.addEventListener('appinstalled', handleAppInstalled)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      window.removeEventListener('appinstalled', handleAppInstalled)
+    }
   }, [])
 
-  const handleInstallClick = () => {
+  const handleInstall = async () => {
     if (deferredPrompt) {
+      // Show the install prompt
       deferredPrompt.prompt()
-      deferredPrompt.userChoice.then(() => {
-        setShowPrompt(false)
-        setDeferredPrompt(null)
-      })
+      
+      // Wait for the user to respond to the prompt
+      const { outcome } = await deferredPrompt.userChoice
+      console.log(`Install prompt outcome: ${outcome}`)
+      
+      // Clear the deferredPrompt
+      setDeferredPrompt(null)
+      setShowInstall(false)
     }
   }
 
-  if (!showPrompt) return null
+  // Don't show button if already installed or prompt not available
+  if (isInstalled || !showInstall) return null
 
   return (
-    <div className="fixed bottom-4 right-4 bg-white shadow-lg rounded-lg p-4 z-50">
-      <p>Install the Alliance CropCraft App for a better experience!</p>
-      <button className="btn-primary mt-2" onClick={handleInstallClick}>
-        Install
-      </button>
-      <button className="ml-2 text-gray-500" onClick={() => setShowPrompt(false)}>
-        Maybe later
-      </button>
+    <div className="fixed bottom-4 right-4 bg-white shadow-lg rounded-lg p-4 z-50 max-w-sm animate-in slide-in-from-bottom-4 duration-300">
+      <div className="flex items-start space-x-3">
+        <div className="flex-shrink-0 p-2 bg-primary-100 rounded-lg">
+          <Download className="w-5 h-5 text-primary-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-gray-900 mb-3">
+            Install the Livestock Management App for a better experience!
+          </p>
+          <div className="flex space-x-2">
+            <button 
+              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
+              onClick={handleInstall}
+            >
+              Install
+            </button>
+            <button 
+              className="px-4 py-2 text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors duration-200"
+              onClick={() => setShowInstall(false)}
+            >
+              Maybe later
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

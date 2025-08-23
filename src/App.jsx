@@ -48,10 +48,9 @@ function App() {
             path="/login"
             element={
               <PublicRoute>
-                  <>
-                  <PWAInstallPrompt />
+               
                   <Login />
-                </>
+
               </PublicRoute>
             }
           />
@@ -68,7 +67,6 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <PWAInstallPrompt />
                   <Dashboard />
                 </Layout>
               </ProtectedRoute>
@@ -117,6 +115,7 @@ function App() {
           <Route path="/" element={<Navigate to="/dashboard" />} />
         </Routes>
       </Router>
+      <PWAInstallPrompt />
     </AuthProvider>
   )
 }
