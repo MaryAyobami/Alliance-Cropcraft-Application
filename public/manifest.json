@@ -15,18 +15,24 @@
   },
   {
     "src": "./android-chrome-512x512.png",
-    "sizes": "512x512",
+    "sizes": "303x303",
     "type": "image/png"
   }
 ]
   ,
   "screenshots": [
     {
-      "src": "./apple-touch-icon.png",
+      "src": "./img_1280x780.png",
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Dashboard"
+      "label": "Main application view"
+    },
+    {
+      "src": "./img_640x1136.png",
+      "sizes": "640x1136",
+      "type": "image/png",
+      "label": "Mobile application view"
     }
   ],
   "categories": ["productivity", "business"],
