@@ -13,7 +13,7 @@ import {
   MapPin,
   Calendar,
   Hash,
-  Weight,
+  Scale,
   Activity
 } from "lucide-react"
 
@@ -347,7 +347,7 @@ const Livestock = () => {
                   
                   {animal.weight && (
                     <div className="flex items-center text-sm text-gray-600">
-                      <Weight className="w-4 h-4 mr-2" />
+                      <Scale className="w-4 h-4 mr-2" />
                       <span>{animal.weight} kg</span>
                     </div>
                   )}

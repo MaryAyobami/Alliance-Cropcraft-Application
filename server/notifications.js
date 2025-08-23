@@ -1,17 +1,9 @@
 const nodemailer = require('nodemailer');
 const cron = require('node-cron');
-const { Pool } = require("pg")
+const { pool } = require('./db')
 const { sendPushToUser } = require('./push')
 
-
-// Database connection
 require("dotenv").config()
-const pool = new Pool({
-  connectionString: "postgresql://postgres.nobbtyhwmjgfeiwpcduk:bams060704@aws-0-eu-north-1.pooler.supabase.com:5432/postgres",
-  ssl: {
-    rejectUnauthorized: false,
-  },
-})
 
 // Test database connection
 pool.connect((err, client, release) => {
@@ -652,52 +644,79 @@ function startNotifications() {
 
 // Optional: Routes you can add to your existing server
 function getNotificationRoutes() {
-    return {
-        // Test notification
-        testNotification: async (userId) => {
+    const express = require('express');
+    const router = express.Router();
+
+    // Test notification endpoint
+    router.post('/test/:userId', async (req, res) => {
+        try {
+            const userId = req.params.userId;
             const user = await SimpleNotifications.getUserById(userId);
-            if (!user) throw new Error('User not found');
+            if (!user) {
+                return res.status(404).json({ error: 'User not found' });
+            }
             
             await emailer.sendMail({
                 from: process.env.EMAIL_USER || 'ogunmolamaryayobami@gmail.com',
                 to: user.email,
                 subject: 'Test Notification',
-                html: '<h2>🧪 Test Email</h2><p>Your notifications are working!</p>'
+                html: '<h2>Test Email</h2><p>Your notifications are working!</p>'
             });
             
-            return { success: true, message: 'Test email sent!' };
-        },
+            res.json({ success: true, message: 'Test email sent!' });
+        } catch (error) {
+            console.error('Error sending test notification:', error);
+            res.status(500).json({ error: 'Failed to send test notification' });
+        }
+    });
 
-        // Send immediate task reminder
-        remindTask: async (taskId) => {
+    // Send immediate task reminder endpoint
+    router.post('/remind/:taskId', async (req, res) => {
+        try {
+            const taskId = req.params.taskId;
             const result = await pool.query('SELECT * FROM tasks WHERE id = $1', [taskId]);
             const task = result.rows[0];
-            if (!task) throw new Error('Task not found');
+            if (!task) {
+                return res.status(404).json({ error: 'Task not found' });
+            }
             
             const user = await SimpleNotifications.getUserById(task.assigned_to);
-            if (!user) throw new Error('User not found');
+            if (!user) {
+                return res.status(404).json({ error: 'User not found' });
+            }
             
             await SimpleNotifications.sendTaskReminder(user, task, 'now');
-            return { success: true, message: 'Reminder sent!' };
-        },
+            res.json({ success: true, message: 'Reminder sent!' });
+        } catch (error) {
+            console.error('Error sending task reminder:', error);
+            res.status(500).json({ error: 'Failed to send task reminder' });
+        }
+    });
 
-        // Get status
-        getStatus: () => ({
-            status: 'active',
-            features: [
-                'Daily Summary (7 AM)',
-                'Evening Review (8 PM)', 
-                'Task Reminders (Every 30 min)',
-                'Overdue Alerts (Every hour)'
-            ]
-        })
-    };
+    // Get status endpoint
+    router.get('/status', (req, res) => {
+        try {
+            res.json({
+                status: 'active',
+                features: [
+                    'Daily Summary (7 AM)',
+                    'Evening Review (8 PM)', 
+                    'Task Reminders (Every 30 min)',
+                    'Overdue Alerts (Every hour)'
+                ]
+            });
+        } catch (error) {
+            console.error('Error getting notification status:', error);
+            res.status(500).json({ error: 'Failed to get notification status' });
+        }
+    });
+
+    return router;
 }
 
 // Export everything
 module.exports = {
     SimpleNotifications,
     startNotifications,
-    getNotificationRoutes,
-    pool
+    getNotificationRoutes
 };
