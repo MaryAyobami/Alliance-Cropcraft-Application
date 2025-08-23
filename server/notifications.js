@@ -280,16 +280,16 @@ class SimpleNotifications {
         const mailOptions = {
             from: 'ogunmolamaryayobami@gmail.com',
             to: user.email,
-            subject: '🔒 Verify Your Alliance CropCraft Account',
+            subject: 'Verify Your Alliance CropCraft Account',
             html: `
                 <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; background-color: #f9f9f9;">
                     <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; color: white; border-radius: 10px 10px 0 0;">
-                        <h1 style="margin: 0; font-size: 24px;">🌱 Alliance CropCraft</h1>
+                        <h1 style="margin: 0; font-size: 24px;">Alliance CropCraft</h1>
                         <p style="margin: 10px 0 0 0; opacity: 0.9;">Farm Management System</p>
                     </div>
                     
                     <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                        <h2 style="color: #374151; margin-bottom: 20px;">Welcome ${user.full_name}! 🎉</h2>
+                        <h2 style="color: #374151; margin-bottom: 20px;">Welcome ${user.full_name}!</h2>
                         
                         <p style="color: #6b7280; line-height: 1.6; margin-bottom: 20px;">
                             Thank you for registering with Alliance CropCraft. To complete your account setup and start managing your farm operations, please verify your email address.
@@ -305,13 +305,13 @@ class SimpleNotifications {
                                       font-weight: bold; 
                                       display: inline-block;
                                       box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
-                                ✅ Verify My Email
+                                Verify My Email
                             </a>
                         </div>
                         
                         <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
                             <p style="color: #6b7280; margin: 0; font-size: 14px;">
-                                <strong>🔗 Can't click the button?</strong><br>
+                                <strong>Can't click the button?</strong><br>
                                 Copy and paste this link into your browser:<br>
                                 <span style="word-break: break-all; color: #10b981;">${verificationUrl}</span>
                             </p>
@@ -349,16 +349,16 @@ class SimpleNotifications {
         const mailOptions = {
             from: 'ogunmolamaryayobami@gmail.com',
             to: assignedUser.email,
-            subject: '📋 New Task Assigned - Alliance CropCraft',
+            subject: 'New Task Assigned - Alliance CropCraft',
             html: `
                 <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; background-color: #f9f9f9;">
                     <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; color: white; border-radius: 10px 10px 0 0;">
-                        <h1 style="margin: 0; font-size: 24px;">📋 New Task Assigned</h1>
+                        <h1 style="margin: 0; font-size: 24px;">New Task Assigned</h1>
                         <p style="margin: 10px 0 0 0; opacity: 0.9;">Alliance CropCraft Task Management</p>
                     </div>
                     
                     <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                        <h2 style="color: #374151; margin-bottom: 20px;">Hi ${assignedUser.full_name}! 👋</h2>
+                        <h2 style="color: #374151; margin-bottom: 20px;">Hi ${assignedUser.full_name}!</h2>
                         
                         <p style="color: #6b7280; line-height: 1.6; margin-bottom: 20px;">
                             You have been assigned a new task by <strong>${createdByUser.full_name}</strong>. Here are the details:
@@ -400,7 +400,7 @@ class SimpleNotifications {
                                       font-weight: bold; 
                                       display: inline-block;
                                       box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
-                                📋 View Task Details
+                                View Task Details
                             </a>
                         </div>
                         
@@ -441,16 +441,16 @@ class SimpleNotifications {
                 const mailOptions = {
                     from: 'ogunmolamaryayobami@gmail.com',
                     to: user.email,
-                    subject: '📅 New Event Created - Alliance CropCraft',
+                    subject: 'New Event Created - Alliance CropCraft',
                     html: `
                         <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; background-color: #f9f9f9;">
                             <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 30px; text-align: center; color: white; border-radius: 10px 10px 0 0;">
-                                <h1 style="margin: 0; font-size: 24px;">📅 New Event Created</h1>
+                                <h1 style="margin: 0; font-size: 24px;">New Event Created</h1>
                                 <p style="margin: 10px 0 0 0; opacity: 0.9;">Alliance CropCraft Event Management</p>
                             </div>
                             
                             <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                                <h2 style="color: #374151; margin-bottom: 20px;">Hi ${user.full_name}! 👋</h2>
+                                <h2 style="color: #374151; margin-bottom: 20px;">Hi ${user.full_name}!</h2>
                                 
                                 <p style="color: #6b7280; line-height: 1.6; margin-bottom: 20px;">
                                     A new event has been created by <strong>${createdByUser.full_name}</strong>. Here are the details:
@@ -498,7 +498,7 @@ class SimpleNotifications {
                                               font-weight: bold; 
                                               display: inline-block;
                                               box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);">
-                                        📅 View Calendar
+                                        View Calendar
                                     </a>
                                 </div>
                                 

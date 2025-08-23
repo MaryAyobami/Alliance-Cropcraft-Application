@@ -236,9 +236,9 @@ const CreateTaskForm = ({ onTaskCreated, onCancel }) => {
             onChange={handleChange}
             className={getFieldClassName('priority')}
           >
-            <option value="high">🔴 High</option>
-            <option value="medium">🟡 Medium</option>
-            <option value="low">🟢 Low</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
           </select>
         </div>
 
@@ -250,8 +250,8 @@ const CreateTaskForm = ({ onTaskCreated, onCancel }) => {
             onChange={handleChange}
             className={getFieldClassName('tag')}
           >
-            <option value="static">🔄 Static (Daily/Recurrent)</option>
-            <option value="dynamic">📅 Dynamic (One-time)</option>
+            <option value="static">Static (Daily/Recurrent)</option>
+            <option value="dynamic">Dynamic (One-time)</option>
           </select>
         </div>
       </div>
