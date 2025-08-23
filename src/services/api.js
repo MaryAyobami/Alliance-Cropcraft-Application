@@ -19,7 +19,8 @@ api.interceptors.request.use((config) => {
 export const authAPI = {
   login: (credentials) => api.post("/auth/login", credentials),
   register: (userData) => api.post("/auth/register", userData),
-  sendEmailVerification: (email) => api.post("/auth/send-verification", { email }),
+  sendVerification: (email) => api.post("/auth/send-verification", { email }),
+  sendEmailVerification: (email) => api.post("/auth/send-verification", { email }), // Alias for backward compatibility
   verifyEmail: (token) => api.post("/auth/verify-email", { token }),
   forgotPassword: (email) => api.post("/auth/forgot-password", { email }),
   resetPassword: (token, newPassword) => api.post("/auth/reset-password", { token, newPassword }),
@@ -63,6 +64,15 @@ export const reportsAPI = {
   getStats: (params) => api.get("/reports/stats", { params }),
   getStaffPerformance: (params) => api.get("/reports/staff-performance", { params }),
   exportReport: (params) => api.get("/reports/export", { params, responseType: "blob" }),
+}
+
+// Livestock API
+export const livestockAPI = {
+  getLivestock: () => api.get("/livestock"),
+  getLivestockById: (id) => api.get(`/livestock/${id}`),
+  createLivestock: (livestockData) => api.post("/livestock", livestockData),
+  updateLivestock: (id, livestockData) => api.put(`/livestock/${id}`, livestockData),
+  deleteLivestock: (id) => api.delete(`/livestock/${id}`),
 }
 
 export const subscribePush = (subscription) =>

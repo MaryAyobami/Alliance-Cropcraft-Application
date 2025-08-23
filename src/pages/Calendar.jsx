@@ -21,6 +21,8 @@ const Calendar = () => {
     reminder_minutes: 30,
     notify: true,
   })
+  const [error, setError] = useState("")
+  const [fieldErrors, setFieldErrors] = useState({})
 
   useEffect(() => {
     fetchEvents()
@@ -37,8 +39,51 @@ const Calendar = () => {
     }
   }
 
+  const validateEvent = (eventData) => {
+    const errors = {}
+    
+    if (!eventData.title.trim()) {
+      errors.title = "Event title is required"
+    } else if (eventData.title.length > 100) {
+      errors.title = "Title must be less than 100 characters"
+    }
+    
+    if (!eventData.event_date) {
+      errors.event_date = "Event date is required"
+    } else {
+      const selectedDate = new Date(eventData.event_date)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      if (selectedDate < today) {
+        errors.event_date = "Event date cannot be in the past"
+      }
+    }
+    
+    if (eventData.description && eventData.description.length > 500) {
+      errors.description = "Description must be less than 500 characters"
+    }
+
+    if (eventData.location && eventData.location.length > 100) {
+      errors.location = "Location must be less than 100 characters"
+    }
+
+    return errors
+  }
+
   const handleCreateEvent = async (e) => {
     e.preventDefault()
+    setError("")
+    setFieldErrors({})
+
+    // Validate event data
+    const errors = validateEvent(newEvent)
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      setError("Please fix the errors below")
+      return
+    }
+
     try {
       const response = await eventsAPI.createEvent(newEvent)
       setEvents([...events, response.data])
@@ -54,8 +99,26 @@ const Calendar = () => {
         reminder_minutes: 30,
         notify: true,
       })
+      setError("")
+      setFieldErrors({})
+      
+      // Show success notification (you can replace this with a toast)
+      alert("Event created successfully!")
+      
     } catch (error) {
       console.error("Error creating event:", error)
+      const errorData = error.response?.data
+      
+      if (errorData?.field) {
+        setFieldErrors({ [errorData.field]: errorData.message })
+        setError("Please check the highlighted field")
+      } else if (errorData?.message) {
+        setError(errorData.message)
+      } else if (error.code === 'ERR_NETWORK') {
+        setError("Network error. Please check your connection and try again.")
+      } else {
+        setError("Failed to create event. Please try again.")
+      }
     }
   }
 
@@ -314,6 +377,7 @@ const Calendar = () => {
                   value={newEvent.title}
                   onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
                 />
+                {fieldErrors.title && <p className="text-xs text-red-500 mt-1">{fieldErrors.title}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -326,6 +390,7 @@ const Calendar = () => {
                     value={newEvent.event_date}
                     onChange={(e) => setNewEvent({ ...newEvent, event_date: e.target.value })}
                   />
+                  {fieldErrors.event_date && <p className="text-xs text-red-500 mt-1">{fieldErrors.event_date}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Time *</label>
@@ -348,6 +413,7 @@ const Calendar = () => {
                   value={newEvent.description}
                   onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
                 />
+                {fieldErrors.description && <p className="text-xs text-red-500 mt-1">{fieldErrors.description}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -386,6 +452,7 @@ const Calendar = () => {
                   value={newEvent.location}
                   onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
                 />
+                {fieldErrors.location && <p className="text-xs text-red-500 mt-1">{fieldErrors.location}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -411,6 +478,8 @@ const Calendar = () => {
                   </label>
                 </div>
               </div>
+
+              {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
 
               <div className="flex space-x-3 pt-4">
                 <button type="submit" className="btn-primary flex-1">

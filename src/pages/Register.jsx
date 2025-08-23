@@ -53,12 +53,32 @@ const Register = () => {
     try {
       const { confirmPassword, ...registerData } = formData
       const response = await authAPI.register(registerData)
-      const { token, user } = response.data
-
-      login(token, user)
-      navigate("/dashboard")
+      
+      // Check if email verification is required
+      if (response.data.verification_required) {
+        // Store email for verification page
+        localStorage.setItem('pendingVerificationEmail', response.data.user.email)
+        navigate("/verify-email", { 
+          state: { 
+            message: response.data.message,
+            email: response.data.user.email 
+          }
+        })
+      } else {
+        // Old flow for backward compatibility
+        const { token, user } = response.data
+        login(token, user)
+        navigate("/dashboard")
+      }
     } catch (error) {
-      setError(error.response?.data?.message || "Registration failed")
+      const errorData = error.response?.data
+      if (errorData?.field) {
+        // Handle field-specific errors
+        setError(errorData.message)
+        // You could also highlight the specific field here
+      } else {
+        setError(errorData?.message || "Registration failed")
+      }
     } finally {
       setLoading(false)
     }
