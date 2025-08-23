@@ -6,6 +6,7 @@ const { Pool } = require("pg")
 const multer = require("multer")
 const cron = require("node-cron") 
 const cloudinary = require('cloudinary').v2
+const nodemailer = require('nodemailer')
 
 require("dotenv").config()
 
@@ -93,6 +94,31 @@ const connectWithRetry = async () => {
 // Connect to database
 connectWithRetry();
 
+// Ensure required tables/columns exist for auth features
+const ensureSchema = async () => {
+	try {
+		await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE");
+		await pool.query(`CREATE TABLE IF NOT EXISTS email_verifications (
+			id SERIAL PRIMARY KEY,
+			user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+			token TEXT NOT NULL UNIQUE,
+			expires_at TIMESTAMP NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)`);
+		await pool.query(`CREATE TABLE IF NOT EXISTS password_resets (
+			id SERIAL PRIMARY KEY,
+			user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+			token TEXT NOT NULL UNIQUE,
+			expires_at TIMESTAMP NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)`);
+		console.log('Auth schema ensured')
+	} catch (err) {
+		console.error('Schema ensure error:', err.message)
+	}
+}
+ensureSchema();
+
 
 // Use memoryStorage for multer (for Cloudinary)
 const upload = multer({
@@ -113,6 +139,21 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 })
 
+// Email transporter
+const mailTransporter = nodemailer.createTransport({
+	host: process.env.SMTP_HOST,
+	port: Number(process.env.SMTP_PORT || 587),
+	secure: Boolean(process.env.SMTP_SECURE === 'true'),
+	auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
+})
+
+const sendMail = async ({ to, subject, html }) => {
+	if (!to) throw new Error('Missing recipient email')
+	const from = process.env.SMTP_FROM || 'no-reply@alliance-cropcraft.local'
+	return mailTransporter.sendMail({ from, to, subject, html })
+}
+
+const appBaseUrl = process.env.APP_BASE_URL || 'http://localhost:' + port
 
 // Middleware
 app.use(cors())
@@ -236,6 +277,7 @@ app.post("/api/auth/login", async (req, res) => {
         full_name: user.full_name,
         email: user.email,
         role: user.role,
+        email_verified: Boolean(user.email_verified),
       },
     })
   } catch (error) {
@@ -252,39 +294,145 @@ app.post("/api/auth/register", async (req, res) => {
       return res.status(400).json({ message: "Full name, email and password are required" })
     }
 
-    // Check if user exists
     const existingUser = await queryWithRetry("SELECT * FROM users WHERE email = $1", [email])
     if (existingUser.rows.length > 0) {
       return res.status(400).json({ message: "User already exists" })
     }
 
-    // Hash password
     const password_hash = await bcrypt.hash(password, 10)
 
-    const result = await queryWithRetry(
-      "INSERT INTO users (full_name, email, phone, password_hash, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, full_name, email, role",
-      [full_name, email, phone || null, password_hash, role || 'Staff'],
+    const insert = await queryWithRetry(
+      "INSERT INTO users (full_name, email, phone, password_hash, role, email_verified) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, full_name, email, role, email_verified",
+      [full_name, email, phone || null, password_hash, role || 'Staff', false],
     )
 
-    const user = result.rows[0]
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+    const newUser = insert.rows[0]
+
+    // Create verification token
+    const token = require('crypto').randomBytes(32).toString('hex')
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24) // 24h
+    await queryWithRetry(
+      "INSERT INTO email_verifications (user_id, token, expires_at) VALUES ($1, $2, $3)",
+      [newUser.id, token, expiresAt]
+    )
+
+    const verifyUrl = `${appBaseUrl}/verify-email?token=${encodeURIComponent(token)}`
+    try {
+      await sendMail({
+        to: email,
+        subject: 'Verify your email',
+        html: `<p>Hello ${full_name},</p><p>Verify your account by clicking <a href="${verifyUrl}">this link</a>.</p>`
+      })
+    } catch (mailErr) {
+      console.warn('Failed to send verification email:', mailErr.message)
+    }
+
+    const jwtToken = jwt.sign(
+      { id: newUser.id, email: newUser.email, role: newUser.role },
       process.env.JWT_SECRET || "your-secret-key",
       { expiresIn: "24h" },
     )
 
     res.status(201).json({
-      token,
+      token: jwtToken,
       user: {
-        id: user.id,
-        full_name: user.full_name,
-        email: user.email,
-        role: user.role,
+        id: newUser.id,
+        full_name: newUser.full_name,
+        email: newUser.email,
+        role: newUser.role,
+        email_verified: Boolean(newUser.email_verified),
       },
     })
   } catch (error) {
     console.error("Registration error:", error)
     res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Auth: request verification email
+app.post('/api/auth/request-verification', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id
+    const userRes = await queryWithRetry('SELECT full_name, email, email_verified FROM users WHERE id = $1', [userId])
+    const user = userRes.rows[0]
+    if (!user) return res.status(404).json({ message: 'User not found' })
+    if (user.email_verified) return res.json({ message: 'Email already verified' })
+
+    const token = require('crypto').randomBytes(32).toString('hex')
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24)
+    await queryWithRetry('INSERT INTO email_verifications (user_id, token, expires_at) VALUES ($1, $2, $3)', [userId, token, expiresAt])
+
+    const verifyUrl = `${appBaseUrl}/verify-email?token=${encodeURIComponent(token)}`
+    await sendMail({ to: user.email, subject: 'Verify your email', html: `<p>Hello ${user.full_name},</p><p>Verify your account by clicking <a href="${verifyUrl}">this link</a>.</p>` })
+    res.json({ success: true })
+  } catch (err) {
+    console.error('Request verification error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// Auth: verify email by token
+app.get('/api/auth/verify', async (req, res) => {
+  try {
+    const { token } = req.query
+    if (!token) return res.status(400).json({ message: 'Missing token' })
+    const t = await queryWithRetry('SELECT user_id, expires_at FROM email_verifications WHERE token = $1', [token])
+    const row = t.rows[0]
+    if (!row) return res.status(400).json({ message: 'Invalid token' })
+    if (new Date(row.expires_at) < new Date()) return res.status(400).json({ message: 'Token expired' })
+
+    await queryWithRetry('UPDATE users SET email_verified = TRUE WHERE id = $1', [row.user_id])
+    await queryWithRetry('DELETE FROM email_verifications WHERE token = $1', [token])
+    res.json({ success: true })
+  } catch (err) {
+    console.error('Verify email error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// Auth: forgot password
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body
+    if (!email) return res.status(400).json({ message: 'Email required' })
+    const u = await queryWithRetry('SELECT id, full_name FROM users WHERE email = $1', [email])
+    if (u.rows.length > 0) {
+      const user = u.rows[0]
+      const token = require('crypto').randomBytes(32).toString('hex')
+      const expiresAt = new Date(Date.now() + 1000 * 60 * 30) // 30 min
+      await queryWithRetry('INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1, $2, $3)', [user.id, token, expiresAt])
+      const resetUrl = `${appBaseUrl}/reset-password?token=${encodeURIComponent(token)}`
+      try {
+        await sendMail({ to: email, subject: 'Reset your password', html: `<p>Hello ${user.full_name},</p><p>Reset your password using <a href="${resetUrl}">this link</a> (valid 30 minutes).</p>` })
+      } catch (mailErr) {
+        console.warn('Failed to send reset email:', mailErr.message)
+      }
+    }
+    // Always return success to prevent enumeration
+    res.json({ success: true })
+  } catch (err) {
+    console.error('Forgot password error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// Auth: reset password
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { token, password, confirm } = req.body
+    if (!token || !password || !confirm) return res.status(400).json({ message: 'Invalid request' })
+    if (password !== confirm) return res.status(400).json({ message: 'Passwords do not match' })
+    const row = await queryWithRetry('SELECT user_id, expires_at FROM password_resets WHERE token = $1', [token])
+    const rec = row.rows[0]
+    if (!rec) return res.status(400).json({ message: 'Invalid token' })
+    if (new Date(rec.expires_at) < new Date()) return res.status(400).json({ message: 'Token expired' })
+    const hashed = await bcrypt.hash(password, 10)
+    await queryWithRetry('UPDATE users SET password_hash = $1 WHERE id = $2', [hashed, rec.user_id])
+    await queryWithRetry('DELETE FROM password_resets WHERE token = $1', [token])
+    res.json({ success: true })
+  } catch (err) {
+    console.error('Reset password error:', err)
+    res.status(500).json({ message: 'Server error' })
   }
 })
 
@@ -755,6 +903,62 @@ app.get("/api/reports/staff-performance", authenticateToken, requireAdmin, async
   } catch (error) {
     console.error("Staff performance error:", error)
     res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Reports: completion trend (daily)
+app.get('/api/reports/completion-trend', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { days = 7, start, end } = req.query
+    let where = ''
+    let params = []
+    if (start && end) {
+      where = ' WHERE created_at BETWEEN $1 AND $2 '
+      params = [start, end]
+    } else {
+      where = ` WHERE created_at >= CURRENT_DATE - INTERVAL '${Number(days)} days' `
+    }
+    const q = await queryWithRetry(
+      `SELECT DATE_TRUNC('day', created_at) AS day,
+              COUNT(*) AS total,
+              COUNT(*) FILTER (WHERE status = 'completed') AS completed
+       FROM tasks ${where}
+       GROUP BY day
+       ORDER BY day ASC`, params)
+    const data = q.rows.map(r => ({
+      date: new Date(r.day).toISOString().slice(0,10),
+      total: Number(r.total),
+      completed: Number(r.completed),
+      rate: Number(r.total) > 0 ? Math.round((Number(r.completed)/Number(r.total))*100) : 0,
+    }))
+    res.json({ data })
+  } catch (err) {
+    console.error('Completion trend error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// Reports: task distribution by priority
+app.get('/api/reports/task-distribution', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { start, end } = req.query
+    let where = ''
+    let params = []
+    if (start && end) {
+      where = ' WHERE created_at BETWEEN $1 AND $2 '
+      params = [start, end]
+    }
+    const q = await queryWithRetry(
+      `SELECT COALESCE(priority, 'Unknown') AS label, COUNT(*) AS count
+       FROM tasks ${where}
+       GROUP BY label
+       ORDER BY count DESC`,
+       params
+    )
+    res.json({ data: q.rows.map(r => ({ label: r.label, count: Number(r.count) })) })
+  } catch (err) {
+    console.error('Task distribution error:', err)
+    res.status(500).json({ message: 'Server error' })
   }
 })
 

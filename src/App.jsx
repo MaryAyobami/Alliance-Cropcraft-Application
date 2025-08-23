@@ -1,5 +1,5 @@
 "use client"
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom"
 import { AuthProvider, useAuth } from "./contexts/AuthContext"
 import Layout from "./components/Layout"
 import Login from "./pages/Login"
@@ -10,9 +10,13 @@ import Calendar from "./pages/Calendar"
 import Reports from "./pages/Reports"
 import PWAInstallPrompt from "./components/PWAInstallPrompt"
 import Settings from "./pages/Settings"
+import VerifyEmail from "./pages/VerifyEmail"
+import ForgotPassword from "./pages/ForgotPassword"
+import ResetPassword from "./pages/ResetPassword"
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth()
+  const location = useLocation()
 
   if (loading) {
     return (
@@ -22,7 +26,13 @@ const ProtectedRoute = ({ children }) => {
     )
   }
 
-  return user ? children : <Navigate to="/login" />
+  if (!user) return <Navigate to="/login" />
+
+  if (user && user.email_verified === false && location.pathname !== '/verify-email') {
+    return <Navigate to="/verify-email" />
+  }
+
+  return children
 }
 
 const PublicRoute = ({ children }) => {
@@ -72,6 +82,32 @@ function App() {
             element={
               <PublicRoute>
                 <Register />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/verify-email"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <VerifyEmail />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/forgot-password"
+            element={
+              <PublicRoute>
+                <ForgotPassword />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/reset-password"
+            element={
+              <PublicRoute>
+                <ResetPassword />
               </PublicRoute>
             }
           />
