@@ -4,9 +4,9 @@ const Logo = ({ size = "80", className = "" }) => {
   return (
     <div className={`inline-flex items-center justify-center ${className}`}>
       <img 
-        src="/IMG_3332.jpeg" 
+        src="/logo.png" 
         alt="Alliance CropCraft Limited" 
-        className={`rounded-full object-cover shadow-lg border-2 border-white`}
+        className={`rounded-full object-cover shadow-sm border-1 border-white`}
         style={{ width: `${size}px`, height: `${size}px` }}
       />
     </div>
