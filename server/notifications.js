@@ -85,6 +85,36 @@ class SimpleNotifications {
         });
     }
 
+    // Check for upcoming events every 15 minutes
+    static setupEventReminders() {
+        cron.schedule('*/15 * * * *', async () => {
+            console.log('📅 Checking for upcoming events...');
+            try {
+                const result = await pool.query(`
+                    SELECT e.*, u.id as user_id, u.email, u.full_name
+                    FROM events e
+                    JOIN users u ON u.id = e.created_by
+                    WHERE e.event_date::timestamp + COALESCE(e.event_time::interval, '00:00') > NOW()
+                      AND e.event_date::timestamp + COALESCE(e.event_time::interval, '00:00') <= NOW() + INTERVAL '2 hours'
+                `)
+                for (const ev of result.rows) {
+                    const eventDate = new Date(`${ev.event_date}T${ev.event_time || '00:00'}:00`)
+                    const minutesLeft = Math.floor((eventDate - new Date()) / (1000 * 60))
+                    const threshold = ev.reminder_minutes ?? 30
+                    if (ev.notify && minutesLeft <= threshold && minutesLeft >= threshold - 15) {
+                        await sendPushToUser(ev.user_id, {
+                            title: 'Event Reminder',
+                            body: `${ev.title} starts in ${minutesLeft} minutes`,
+                            icon: '/public/android-chrome-192x192.png'
+                        })
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Error checking events:', error)
+            }
+        })
+    }
+
     // Check overdue tasks every hour
     static setupOverdueCheck() {
         cron.schedule('0 * * * *', async () => {
@@ -349,12 +379,14 @@ function startNotifications() {
     SimpleNotifications.setupDailySummary();    // 7 AM daily summary
     SimpleNotifications.setupEveningReview();   // 8 PM daily review  
     SimpleNotifications.setupTaskReminders();   // Every 30 min check
+    SimpleNotifications.setupEventReminders();  // Every 15 min check for events
     SimpleNotifications.setupOverdueCheck();    // Every hour check
     
     console.log('✅ Notification system active!');
     console.log('📅 Daily Summary: 7:00 AM');
     console.log('📊 Evening Review: 8:00 PM');
     console.log('⏰ Task Reminders: Every 30 minutes');
+    console.log('📆 Event Reminders: Every 15 minutes');
     console.log('⚠️ Overdue Check: Every hour');
 }
 
