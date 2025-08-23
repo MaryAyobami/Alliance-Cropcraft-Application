@@ -995,6 +995,113 @@ app.post("/api/tasks/:id/complete-with-evidence", authenticateToken, async (req,
   }
 })
 
+// Get task history for the current week
+app.get("/api/tasks/history/weekly", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id
+    const userRole = req.user.role
+
+    let query
+    let params
+
+    // Get tasks for the current week (Monday to Sunday)
+    if (userRole === "Admin User") {
+      query = `
+        SELECT t.*, u.full_name as assigned_name 
+        FROM tasks t 
+        LEFT JOIN users u ON t.assigned_to = u.id 
+        WHERE 
+          (t.tag = 'static' AND t.recurrent = true)
+          OR
+          (t.tag = 'dynamic' AND t.active_date >= date_trunc('week', CURRENT_DATE) AND t.active_date < date_trunc('week', CURRENT_DATE) + interval '7 days')
+        ORDER BY t.created_at DESC
+      `
+      params = []
+    } else {
+      query = `
+        SELECT t.*, u.full_name as assigned_name 
+        FROM tasks t 
+        LEFT JOIN users u ON t.assigned_to = u.id 
+        WHERE 
+          t.assigned_to = $1 AND (
+            (t.tag = 'static' AND t.recurrent = true)
+            OR
+            (t.tag = 'dynamic' AND t.active_date >= date_trunc('week', CURRENT_DATE) AND t.active_date < date_trunc('week', CURRENT_DATE) + interval '7 days')
+          )
+        ORDER BY t.created_at DESC
+      `
+      params = [userId]
+    }
+
+    const result = await pool.query(query, params)
+    res.json({ data: result.rows })
+  } catch (error) {
+    console.error("Get task history error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Get task history for a specific week
+app.get("/api/tasks/history/:week", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id
+    const userRole = req.user.role
+    const week = req.params.week
+
+    let query
+    let params
+
+    // Parse week parameter (format: YYYY-WW)
+    let startDate, endDate
+    if (week === "current") {
+      startDate = "date_trunc('week', CURRENT_DATE)"
+      endDate = "date_trunc('week', CURRENT_DATE) + interval '7 days'"
+    } else {
+      // Parse week format like "2024-01" (year-week)
+      const [year, weekNum] = week.split('-')
+      if (!year || !weekNum) {
+        return res.status(400).json({ message: "Invalid week format. Use YYYY-WW or 'current'" })
+      }
+      startDate = `date_trunc('week', to_date('${year}-01-01', 'YYYY-MM-DD') + (${weekNum} - 1) * interval '7 days')`
+      endDate = `date_trunc('week', to_date('${year}-01-01', 'YYYY-MM-DD') + (${weekNum} - 1) * interval '7 days') + interval '7 days'`
+    }
+
+    if (userRole === "Admin User") {
+      query = `
+        SELECT t.*, u.full_name as assigned_name 
+        FROM tasks t 
+        LEFT JOIN users u ON t.assigned_to = u.id 
+        WHERE 
+          (t.tag = 'static' AND t.recurrent = true)
+          OR
+          (t.tag = 'dynamic' AND t.active_date >= ${startDate} AND t.active_date < ${endDate})
+        ORDER BY t.created_at DESC
+      `
+      params = []
+    } else {
+      query = `
+        SELECT t.*, u.full_name as assigned_name 
+        FROM tasks t 
+        LEFT JOIN users u ON t.assigned_to = u.id 
+        WHERE 
+          t.assigned_to = $1 AND (
+            (t.tag = 'static' AND t.recurrent = true)
+            OR
+            (t.tag = 'dynamic' AND t.active_date >= ${startDate} AND t.active_date < ${endDate})
+          )
+        ORDER BY t.created_at DESC
+      `
+      params = [userId]
+    }
+
+    const result = await pool.query(query, params)
+    res.json({ data: result.rows })
+  } catch (error) {
+    console.error("Get task history error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
 // Get task details
 app.get("/api/tasks/:id/details", authenticateToken, async (req, res) => {
   try {

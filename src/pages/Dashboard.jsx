@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "../contexts/AuthContext"
 import { dashboardAPI } from "../services/api"
-import { TrendingUp, Users, Calendar, CheckCircle, Clock, Sun, Sunset, Moon, Cloud, CloudRain, Thermometer, MapPin } from "lucide-react"
+import { TrendingUp, Users, Calendar, CheckCircle, Clock, Sun, Sunset, Moon, Cloud, CloudRain, Thermometer, MapPin, ArrowRight } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 const Dashboard = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [stats, setStats] = useState(null)
   const [tasks, setTasks] = useState({ morning: [], afternoon: [], evening: [] })
   const [weather, setWeather] = useState(null)
@@ -133,7 +135,11 @@ const Dashboard = () => {
 
       <div className="space-y-4">
         {tasks.slice(0, 4).map((task) => (
-          <div key={task.id} className="flex items-center justify-between group hover:bg-gray-50 -mx-2 px-2 py-2 rounded-lg transition-colors">
+          <div 
+            key={task.id} 
+            className="flex items-center justify-between group hover:bg-gray-50 -mx-2 px-2 py-2 rounded-lg transition-colors cursor-pointer"
+            onClick={() => navigate(`/task-details/${task.id}`)}
+          >
             <div className="flex items-center space-x-3 flex-1 min-w-0">
               {task.status === "completed" ? (
                 <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
@@ -277,7 +283,16 @@ const Dashboard = () => {
       {/* Today's Schedule */}
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-2">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Today's Schedule</h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Today's Schedule</h2>
+            <button
+              onClick={() => navigate('/task-history?week=current')}
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-primary-600 bg-primary-50 rounded-lg hover:bg-primary-100 transition-colors"
+            >
+              <span>Tasks This Week</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
           <div className="text-xs sm:text-sm text-gray-500">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </div>

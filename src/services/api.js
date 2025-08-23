@@ -49,6 +49,9 @@ export const tasksAPI = {
   createTask: (taskData) => api.post("/tasks", taskData),
   completeTaskWithEvidence: (taskData) =>
     api.post(`/tasks/${taskData.get('taskId')}/complete-with-evidence`, taskData),
+  getTaskDetails: (taskId) => api.get(`/tasks/${taskId}/details`),
+  getWeeklyHistory: () => api.get("/tasks/history/weekly"),
+  getHistory: (params) => api.get(`/tasks/history/${params.week || 'current'}`),
 }
 
 // Events API
