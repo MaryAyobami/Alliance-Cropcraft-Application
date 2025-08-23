@@ -50,12 +50,15 @@ export const tasksAPI = {
 export const eventsAPI = {
   getEvents: () => api.get("/events"),
   createEvent: (eventData) => api.post("/events", eventData),
+  updateEvent: (eventId, eventData) => api.put(`/events/${eventId}`, eventData),
+  deleteEvent: (eventId) => api.delete(`/events/${eventId}`),
 }
 
 // Reports API
 export const reportsAPI = {
-  getStats: () => api.get("/reports/stats"),
-  getStaffPerformance: () => api.get("/reports/staff-performance"),
+  getStats: (params) => api.get("/reports/stats", { params }),
+  getStaffPerformance: (params) => api.get("/reports/staff-performance", { params }),
+  exportReport: (params) => api.get("/reports/export", { params, responseType: "blob" }),
 }
 
 export const subscribePush = (subscription) =>

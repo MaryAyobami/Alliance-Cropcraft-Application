@@ -25,12 +25,12 @@ const Layout = ({ children }) => {
     navigate("/login");
   };
 
-  const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Tasks", href: "/tasks", icon: CheckSquare },
-    { name: "Calendar", href: "/calendar", icon: Calendar },
-    { name: "Reports", href: "/reports", icon: BarChart3 },
-  ];
+  	const navigation = [
+		{ name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+		{ name: "Tasks", href: "/tasks", icon: CheckSquare },
+		{ name: "Calendar", href: "/calendar", icon: Calendar },
+		...(user?.role === "Admin" ? [{ name: "Reports", href: "/reports", icon: BarChart3 }] : []),
+	];
 
   return (
     <div className="min-h-screen bg-gray-50 relative overflow-hidden">
