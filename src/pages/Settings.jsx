@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react"
 import { User, Mail, Phone, Lock, Bell, Edit3, Camera, Check, X } from "lucide-react"
+import { userAPI } from "../services/api"
+import api from "../services/api"
 
 const Profile = () => {
   const [profile, setProfile] = useState({
@@ -17,21 +19,38 @@ const Profile = () => {
     confirm: ""
   })
   const [showNotifications, setShowNotifications] = useState(false)
-  const [notifications, setNotifications] = useState({
-    push: true,
-    email: true,
-    morningTime: "08:00",
-    eveningTime: "18:00"
-  })
+  const [notifications, setNotifications] = useState({})
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState("")
 
+  const VAPID_PUBLIC_KEY = "BNHDRbAjLIrCvsBN1AIZpWClyCqUAUPq9ae46_TgiLy2uY4CGWmozC_cjdLIJtTX-Pg8Zsk0AZzlENIH-YqHMq8" // Replace with your actual public key
+
   useEffect(() => {
-    // Fetch user profile and notification settings from backend
-    // Example:
-    // setProfile({ name: "John Doe", email: "john@example.com", phone: "08012345678", avatar: "/default-avatar.png" })
-    // setNotifications({ push: true, email: true, morningTime: "08:00", eveningTime: "18:00" })
-  }, [])
+  async function fetchData() {
+    try {
+      const profileRes = await userAPI.getProfile()
+      setProfile({
+        name: profileRes.data.full_name,
+        email: profileRes.data.email,
+        phone: profileRes.data.phone,
+        avatar: profileRes.data.avatar || ""
+      })
+      // Fetch notification preferences
+      // If your backend returns them in profile, use them directly
+      setNotifications({
+        push: profileRes.data.notif_push ?? true,
+        email: profileRes.data.notif_email ?? true,
+        morningTime: profileRes.data.notif_morning ?? "08:00",
+        eveningTime: profileRes.data.notif_evening ?? "18:00"
+      })
+      console.log(notifications)
+      console.log(profileRes.data)
+    } catch (err) {
+      // handle error
+    }
+  }
+  fetchData()
+}, [])
 
   const handleProfileChange = (e) => {
     setProfile({ ...profile, [e.target.name]: e.target.value })
@@ -69,6 +88,26 @@ const Profile = () => {
     setTimeout(() => setMessage(""), 3000)
   }
 
+  const enablePushNotifications = async () => {
+  if ('serviceWorker' in navigator && 'PushManager' in window) {
+    const registration = await navigator.serviceWorker.ready
+    const permission = await Notification.requestPermission()
+    if (permission !== 'granted') {
+      alert("Permission denied for push notifications.")
+      return
+    }
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: VAPID_PUBLIC_KEY
+    })
+    await fetch('/api/notifications/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(subscription)
+    })
+    alert("Push notifications enabled!")
+  }
+}
   const handleNotificationsChange = (e) => {
     const { name, value, type, checked } = e.target
     setNotifications({
@@ -77,15 +116,27 @@ const Profile = () => {
     })
   }
 
-  const handleSaveNotifications = async () => {
-    setLoading(true)
-    setMessage("")
-    // TODO: Send updated notifications to backend
-    setLoading(false)
-    setShowNotifications(false)
+const handleSaveNotifications = async () => {
+  setLoading(true)
+  setMessage("")
+  try {
+    await userAPI.updateNotifications({
+      push: notifications.push,
+      email: notifications.email,
+      morningTime: notifications.morningTime,
+      eveningTime: notifications.eveningTime
+    })
+    if (notifications.push) {
+      await enablePushNotifications()
+    }
     setMessage("Notification settings updated!")
-    setTimeout(() => setMessage(""), 3000)
+  } catch (err) {
+    setMessage("Failed to update notification settings.")
   }
+  setLoading(false)
+  setShowNotifications(false)
+  setTimeout(() => setMessage(""), 3000)
+}
 
   return (
     <div className="min-h-screen py-8 px-4">

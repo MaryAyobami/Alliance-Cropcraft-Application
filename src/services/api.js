@@ -27,6 +27,9 @@ export const userAPI = {
   updateProfile: (userData) => api.put("/users/profile", userData),
   getUsers: () => api.get("/users"),
   createUser: (userData) => api.post("/users", userData),
+  uploadAvatar: (formData) => api.post("/users/avatar", formData),
+  changePassword: (data) => api.put("/users/password", data),
+  updateNotifications: (formData) => api.put("/users/notifications", formData),
 }
 // Dashboard API
 export const dashboardAPI = {
@@ -54,5 +57,8 @@ export const reportsAPI = {
   getStats: () => api.get("/reports/stats"),
   getStaffPerformance: () => api.get("/reports/staff-performance"),
 }
+
+export const subscribePush = (subscription) =>
+  api.post("/notifications/subscribe", subscription)
 
 export default api
