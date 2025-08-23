@@ -145,6 +145,13 @@ const authenticateToken = (req, res, next) => {
   })
 }
 
+// Admin guard
+function requireAdmin(req, res, next) {
+  const role = req.user?.role
+  if (role === 'Admin User' || role === 'Admin') return next()
+  return res.status(403).json({ message: 'Admin access required' })
+}
+
 // Global error handler middleware
 app.use((err, req, res, next) => {
   console.error('Global error handler:', err);
@@ -635,28 +642,75 @@ app.post("/api/events", authenticateToken, async (req, res) => {
   }
 })
 
-// Reports routes
-app.get("/api/reports/stats", authenticateToken, async (req, res) => {
+// Update an event
+app.put("/api/events/:id", authenticateToken, async (req, res) => {
   try {
-    // Task completion rate
-    const completionResult = await pool.query(`
-      SELECT 
+    const { id } = req.params
+    const { title, description, event_date, event_time, location, type, priority } = req.body
+
+    const result = await pool.query(
+      `UPDATE events SET 
+        title = COALESCE($1, title),
+        description = COALESCE($2, description),
+        event_date = COALESCE($3, event_date),
+        event_time = COALESCE($4, event_time),
+        location = COALESCE($5, location),
+        type = COALESCE($6, type),
+        priority = COALESCE($7, priority)
+      WHERE id = $8 RETURNING *`,
+      [title || null, description || null, event_date || null, event_time || null, location || null, type || null, priority || null, id]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Event not found" })
+    }
+
+    res.json(result.rows[0])
+  } catch (error) {
+    console.error("Update event error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Delete an event
+app.delete("/api/events/:id", authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params
+    const result = await pool.query("DELETE FROM events WHERE id = $1 RETURNING id", [id])
+    if (result.rows.length === 0) return res.status(404).json({ message: "Event not found" })
+    res.json({ success: true })
+  } catch (error) {
+    console.error("Delete event error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Reports routes
+app.get("/api/reports/stats", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { start, end } = req.query
+    let where = " WHERE created_at >= CURRENT_DATE - INTERVAL '7 days' "
+    let params = []
+    if (start && end) {
+      where = " WHERE created_at BETWEEN $1 AND $2 "
+      params = [start, end]
+    }
+
+    // Task completion rate over range
+    const completionResult = await pool.query(
+      `SELECT 
         COUNT(*) as total_tasks,
         COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_tasks
-      FROM tasks 
-      WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'
-    `)
+      FROM tasks ${where}`,
+      params
+    )
 
     const { total_tasks, completed_tasks } = completionResult.rows[0]
     const completionRate = total_tasks > 0 ? ((completed_tasks / total_tasks) * 100).toFixed(1) : 0
 
-    // Active livestock (mock data)
+    // Mock metrics - replace with real sources as needed
     const activeLivestock = 373
-
-    // Staff efficiency (mock data)
     const staffEfficiency = 91.2
-
-    // Monthly revenue (mock data)
     const monthlyRevenue = 22.8
 
     res.json({
@@ -671,27 +725,61 @@ app.get("/api/reports/stats", authenticateToken, async (req, res) => {
   }
 })
 
-app.get("/api/reports/staff-performance", authenticateToken, async (req, res) => {
+app.get("/api/reports/staff-performance", authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT 
+    const { start, end } = req.query
+    let dateFilter = ""
+    let params = []
+    if (start && end) {
+      dateFilter = " AND t.created_at BETWEEN $1 AND $2 "
+      params = [start, end]
+    }
+
+    const result = await pool.query(
+      `SELECT 
         u.id,
         u.full_name,
         u.role,
         COUNT(t.id) as tasks_completed,
         ROUND(AVG(CASE WHEN t.status = 'completed' THEN 100 ELSE 0 END), 1) as efficiency
       FROM users u
-      LEFT JOIN tasks t ON u.id = t.assigned_to AND t.status = 'completed'
+      LEFT JOIN tasks t ON u.id = t.assigned_to ${dateFilter}
       WHERE u.role != 'Admin User'
       GROUP BY u.id, u.full_name, u.role
       ORDER BY tasks_completed DESC
-      LIMIT 5
-    `)
+      LIMIT 5`,
+      params
+    )
 
     res.json(result.rows)
   } catch (error) {
     console.error("Staff performance error:", error)
     res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Export CSV
+app.get('/api/reports/export', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { start, end } = req.query
+    const lines = [
+      ["Metric","Value"],
+      ["TaskCompletionRate","72%"],
+      ["ActiveLivestock","373"],
+      ["StaffEfficiency","91.2%"],
+      ["MonthlyRevenue","$22.8k"],
+    ]
+    if (start || end) {
+      lines.push(["Start", start || ""])
+      lines.push(["End", end || ""])
+    }
+    const csv = lines.map(r => r.join(',')).join('\n')
+    res.setHeader('Content-Type', 'text/csv')
+    res.setHeader('Content-Disposition', 'attachment; filename=report.csv')
+    res.send(csv)
+  } catch (error) {
+    console.error('Export report error:', error)
+    res.status(500).json({ message: 'Server error' })
   }
 })
 
