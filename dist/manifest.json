@@ -1,0 +1,40 @@
+{
+  "name": "Alliance CropCraft Limited",
+  "short_name": "Alliance CropCraft",
+  "description": "Comprehensive livestock management system",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#22c55e",
+  "orientation": "portrait-primary",
+  "icons": [
+  {
+    "src": "./android-chrome-192x192.png",
+    "sizes": "192x192",
+    "type": "image/png"
+  },
+  {
+    "src": "./android-chrome-512x512.png",
+    "sizes": "303x303",
+    "type": "image/png"
+  }
+]
+  ,
+  "screenshots": [
+    {
+      "src": "./img_1280x780.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Main application view"
+    },
+    {
+      "src": "./img_640x1136.png",
+      "sizes": "640x1136",
+      "type": "image/png",
+      "label": "Mobile application view"
+    }
+  ],
+  "categories": ["productivity", "business"],
+  "lang": "en"
+}

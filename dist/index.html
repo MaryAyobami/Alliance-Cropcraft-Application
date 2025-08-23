@@ -2,13 +2,27 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="manifest" href="/manifest.json" />
+    <!-- iOS specific -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Livestock" />
+    <link rel="apple-touch-icon" href="/assets/apple-touch-icon-c8cbb6c4.png" />
+
+    <!-- Favicon -->
+    <link rel="icon" href="/assets/favicon-cc07ff68.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,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" />
+    <link rel="icon" type="image/png" sizes="16x16" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAADIElEQVR4AWSSe0yVZRzHP8/z4gmUBBUNDkQpUqDTZRkUJzstbgYyzzm6sDTXqqXdtm6Yq9GF2WZtrWXm7I9objIRxaHM29mUeVS84nCTqcfLARlynIioIMIBXn+v4tzR932+z+X3/H7f53fTyYuKzLQPPOaIfIcZkZdlGvnhiJgtcsHj8ixznCfH1DZDc/5yEFN+FGGfUvcFpmmGye8dhqCr5zY6ELyKdW+pWLh3OTxZhhaGj+GLcMtAq0esDK2JjozE0DrcQE6G1sSOGskzE+IE4xkt+zAti/G5xHg+ynFiHxOLHiZXShEjyq5XXuLHYjc/WVjglr1LdCwrYbdG1BM25sx8gQ9znSybX0SkbQRKKcZEj+KTglxK3HOY92oGr09NZ9aUNOZnZaAtQwsRhsFkewK9/QN0dnfz1oxpfCcvKblMjhvHYqeD0VGRrNnlxb3yT4p+/YO/t+9+SJBqj2e5p5Bom4HvtJ/+wUHem5XJyxOTuNXXy7XebqrqD/PX1t00Nbfib2lj1TbvfYIH8TnSUpkxeRKVvsMcu3BR3Dco//JTem/3kL2sjN/Wb6Y/NIBUkEHxPTQwiDa0JjM1hY/zsrnc2cX/e3w0XWpl6T/lnAy08OTIKCq+/oJ4CeOOMrDaxRAGq3qmxKefjhvL54W59IVC1BxpwHfqDAmxMaQl2lmytpzGi81MTIjn9/ff4dmECQzJy0NiKKnBWvRnhXlMT06iMRCgtqFRXDJY5HyNlYuLJal2fqioIth1gxdTJlHimUuqJNoK3BSiKFsE2pM5k47uHmqPNpDy1HiWuwuZ58ggPcmOldSW9iv8661DGYqcaemULnDxrauAkrkFlL7tQtef9bPjxEmOnguQPX0qC6Vc9rGxKKXEs0RWLCxmy8F6yio3c769DeeU51mS/yZLZ2fz7hsOdGlFNWt2emm/3iU5OM6KTTX8snELP1dWU1ZVw7HmS9JIMVT5jvDVfxV8I1i1dQera3fy/fpqdMvVDoKdN+m508f+Jj/r6g6ybu8DHGCD7xCtHdcISYP524LyyAnWevexelcdG/cf4i4AAAD//z8Wyy4AAAAGSURBVAMAgGol0QdcoQYAAAAASUVORK5CYII=" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Alliance CropCraft - Livestock Management</title>
-    <script type="module" crossorigin src="/assets/index-f5394f6a.js"></script>
-    <link rel="stylesheet" href="/assets/index-4a6e432c.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Alliance CropCraft Limited</title>
+    <script type="module" crossorigin src="/assets/index-bde98359.js"></script>
+    <link rel="stylesheet" href="/assets/index-04fa9555.css">
   </head>
-  <body>
+  <body style="font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial">
     <div id="root"></div>
     
   </body>

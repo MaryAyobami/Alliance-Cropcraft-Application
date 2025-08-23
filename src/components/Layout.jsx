@@ -21,8 +21,7 @@ const Layout = ({ children }) => {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const handleLogout = () => {
-    logout();
-    navigate("/login");
+    logout(); // The AuthContext now handles confirmation and navigation
   };
 
   	const navigation = [

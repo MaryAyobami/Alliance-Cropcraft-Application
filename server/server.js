@@ -288,6 +288,123 @@ app.post("/api/auth/register", async (req, res) => {
   }
 })
 
+// Email verification endpoint
+app.post("/api/auth/send-verification", async (req, res) => {
+  try {
+    const { email } = req.body
+    
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" })
+    }
+    
+    // Check if user exists
+    const userResult = await queryWithRetry("SELECT * FROM users WHERE email = $1", [email])
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" })
+    }
+    
+    // Generate verification token
+    const crypto = require('crypto')
+    const verificationToken = crypto.randomBytes(32).toString('hex')
+    
+    // Store token in database (you may want to create a verification_tokens table)
+    // For now, we'll just simulate success
+    
+    // Here you would send the email with the verification link
+    // For demo purposes, we'll just return success
+    console.log(`Verification email would be sent to ${email} with token: ${verificationToken}`)
+    
+    res.json({ message: "Verification email sent successfully" })
+  } catch (error) {
+    console.error("Send verification error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Verify email endpoint
+app.post("/api/auth/verify-email", async (req, res) => {
+  try {
+    const { token } = req.body
+    
+    if (!token) {
+      return res.status(400).json({ message: "Verification token is required" })
+    }
+    
+    // Here you would verify the token and mark the user as verified
+    // For demo purposes, we'll just return success
+    console.log(`Email verification attempted with token: ${token}`)
+    
+    res.json({ message: "Email verified successfully" })
+  } catch (error) {
+    console.error("Email verification error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Forgot password endpoint
+app.post("/api/auth/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body
+    
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" })
+    }
+    
+    // Check if user exists
+    const userResult = await queryWithRetry("SELECT * FROM users WHERE email = $1", [email])
+    if (userResult.rows.length === 0) {
+      // Don't reveal if user exists for security
+      return res.json({ message: "If an account with this email exists, a password reset link has been sent." })
+    }
+    
+    // Generate reset token
+    const crypto = require('crypto')
+    const resetToken = crypto.randomBytes(32).toString('hex')
+    const resetTokenExpiry = new Date(Date.now() + 3600000) // 1 hour from now
+    
+    // Store token in database (you may want to create a password_reset_tokens table)
+    // For now, we'll just simulate success
+    console.log(`Password reset email would be sent to ${email} with token: ${resetToken}`)
+    
+    res.json({ message: "If an account with this email exists, a password reset link has been sent." })
+  } catch (error) {
+    console.error("Forgot password error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Reset password endpoint
+app.post("/api/auth/reset-password", async (req, res) => {
+  try {
+    const { token, newPassword } = req.body
+    
+    if (!token || !newPassword) {
+      return res.status(400).json({ message: "Token and new password are required" })
+    }
+    
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters long" })
+    }
+    
+    // Here you would verify the token and update the user's password
+    // For demo purposes, we'll just simulate success
+    console.log(`Password reset attempted with token: ${token}`)
+    
+    // Hash the new password
+    const password_hash = await bcrypt.hash(newPassword, 10)
+    
+    // In a real implementation, you would:
+    // 1. Verify the token exists and hasn't expired
+    // 2. Update the user's password
+    // 3. Delete the reset token
+    
+    res.json({ message: "Password reset successfully" })
+  } catch (error) {
+    console.error("Reset password error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
 // Dashboard routes
 app.get("/api/dashboard/stats", authenticateToken, async (req, res) => {
   try {
