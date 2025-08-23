@@ -379,6 +379,9 @@ const Login = () => {
                   </svg>
                   Create New Account
                 </Link>
+                <div className="mt-4">
+                  <Link to="/forgot-password" className="text-sm text-primary-600 hover:underline">Forgot your password?</Link>
+                </div>
               </div>
             </div>
           </div>

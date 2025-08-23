@@ -15,10 +15,31 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Auto-logout on auth errors
+api.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    const status = error?.response?.status
+    if (status === 401 || status === 403) {
+      try {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+      } catch {}
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login'
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+
 // Auth API
 export const authAPI = {
   login: (credentials) => api.post("/auth/login", credentials),
   register: (userData) => api.post("/auth/register", userData),
+  verifyEmail: (token) => api.get(`/auth/verify`, { params: { token } }),
+  forgotPassword: (email) => api.post(`/auth/forgot`, { email }),
+  resetPassword: (payload) => api.post(`/auth/reset`, payload),
 }
 
 // User API
