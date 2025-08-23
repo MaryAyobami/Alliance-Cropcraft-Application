@@ -10,6 +10,7 @@ const Calendar = () => {
   const [showModal, setShowModal] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
   const [newEvent, setNewEvent] = useState({
     title: "",
     description: "",
@@ -39,6 +40,8 @@ const Calendar = () => {
 
   const handleCreateEvent = async (e) => {
     e.preventDefault()
+    setError("")
+    
     try {
       const response = await eventsAPI.createEvent(newEvent)
       setEvents([...events, response.data])
@@ -54,7 +57,11 @@ const Calendar = () => {
         reminder_minutes: 30,
         notify: true,
       })
+      
+      // Show success message
+      alert("Event created successfully!")
     } catch (error) {
+      setError(error.response?.data?.message || "Failed to create event. Please check all required fields.")
       console.error("Error creating event:", error)
     }
   }
@@ -302,6 +309,17 @@ const Calendar = () => {
             </div>
 
             <p className="text-sm text-primary-600 mb-6">Schedule a new task or event on the calendar</p>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-400 rounded-r-xl">
+                <div className="flex items-center">
+                  <svg className="w-5 h-5 text-red-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-red-700 font-medium">{error}</span>
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleCreateEvent} className="space-y-4">
               <div>

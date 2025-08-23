@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard"
 import Tasks from "./pages/Tasks"
 import Calendar from "./pages/Calendar"
 import Reports from "./pages/Reports"
+import Livestock from "./pages/Livestock"
 import PWAInstallPrompt from "./components/PWAInstallPrompt"
 import Settings from "./pages/Settings"
 
@@ -151,6 +152,16 @@ function App() {
                     <Reports />
                   </Layout>
                 </AdminRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/livestock"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Livestock />
+                </Layout>
               </ProtectedRoute>
             }
           />

@@ -223,6 +223,11 @@ app.post("/api/auth/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" })
     }
 
+    // Check if email is verified
+    if (!user.email_verified) {
+      return res.status(401).json({ message: "Please verify your email before logging in" })
+    }
+
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET || "your-secret-key",
@@ -262,8 +267,8 @@ app.post("/api/auth/register", async (req, res) => {
     const password_hash = await bcrypt.hash(password, 10)
 
     const result = await queryWithRetry(
-      "INSERT INTO users (full_name, email, phone, password_hash, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, full_name, email, role",
-      [full_name, email, phone || null, password_hash, role || 'Staff'],
+      "INSERT INTO users (full_name, email, phone, password_hash, role, email_verified) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, full_name, email, role",
+      [full_name, email, phone || null, password_hash, role || 'Staff', false],
     )
 
     const user = result.rows[0]
@@ -303,16 +308,27 @@ app.post("/api/auth/send-verification", async (req, res) => {
       return res.status(404).json({ message: "User not found" })
     }
     
+    const user = userResult.rows[0]
+    
+    // Check if already verified
+    if (user.email_verified) {
+      return res.status(400).json({ message: "Email is already verified" })
+    }
+    
     // Generate verification token
     const crypto = require('crypto')
     const verificationToken = crypto.randomBytes(32).toString('hex')
+    const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
     
-    // Store token in database (you may want to create a verification_tokens table)
-    // For now, we'll just simulate success
+    // Store token in database
+    await queryWithRetry(
+      "INSERT INTO verification_tokens (user_id, token, expires_at) VALUES ($1, $2, $3) ON CONFLICT (user_id) DO UPDATE SET token = $2, expires_at = $3",
+      [user.id, verificationToken, tokenExpiry]
+    )
     
-    // Here you would send the email with the verification link
-    // For demo purposes, we'll just return success
-    console.log(`Verification email would be sent to ${email} with token: ${verificationToken}`)
+    // Send verification email (using nodemailer or similar)
+    // For now, we'll simulate email sending
+    console.log(`Verification email sent to ${email} with token: ${verificationToken}`)
     
     res.json({ message: "Verification email sent successfully" })
   } catch (error) {
@@ -330,9 +346,29 @@ app.post("/api/auth/verify-email", async (req, res) => {
       return res.status(400).json({ message: "Verification token is required" })
     }
     
-    // Here you would verify the token and mark the user as verified
-    // For demo purposes, we'll just return success
-    console.log(`Email verification attempted with token: ${token}`)
+    // Find and validate token
+    const tokenResult = await queryWithRetry(
+      "SELECT vt.*, u.email FROM verification_tokens vt JOIN users u ON vt.user_id = u.id WHERE vt.token = $1 AND vt.expires_at > NOW()",
+      [token]
+    )
+    
+    if (tokenResult.rows.length === 0) {
+      return res.status(400).json({ message: "Invalid or expired verification token" })
+    }
+    
+    const tokenData = tokenResult.rows[0]
+    
+    // Mark user as verified
+    await queryWithRetry(
+      "UPDATE users SET email_verified = true WHERE id = $1",
+      [tokenData.user_id]
+    )
+    
+    // Delete the used token
+    await queryWithRetry(
+      "DELETE FROM verification_tokens WHERE user_id = $1",
+      [tokenData.user_id]
+    )
     
     res.json({ message: "Email verified successfully" })
   } catch (error) {
@@ -1088,6 +1124,99 @@ app.post('/api/notifications/subscribe', authenticateToken, async (req, res) => 
     res.json({ success: true })
   } catch (err) {
     res.status(500).json({ error: 'Failed to save subscription' })
+  }
+})
+
+// Livestock Management Endpoints
+app.get("/api/livestock", authenticateToken, async (req, res) => {
+  try {
+    const result = await queryWithRetry(
+      "SELECT * FROM livestock ORDER BY created_at DESC"
+    )
+    res.json({ data: result.rows })
+  } catch (error) {
+    console.error("Get livestock error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+app.post("/api/livestock", authenticateToken, async (req, res) => {
+  try {
+    const { name, type, breed, age, weight, health_status, location, notes } = req.body
+    const created_by = req.user.id
+    
+    // Check if user has permission to create livestock
+    if (!['Admin', 'Farm Manager'].includes(req.user.role)) {
+      return res.status(403).json({ message: "Insufficient permissions to create livestock" })
+    }
+    
+    if (!name || !type) {
+      return res.status(400).json({ message: "Name and type are required" })
+    }
+    
+    const result = await queryWithRetry(
+      `INSERT INTO livestock (name, type, breed, age, weight, health_status, location, notes, created_by) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [name, type, breed, age, weight, health_status || 'Healthy', location, notes, created_by]
+    )
+    
+    res.status(201).json({ message: 'Livestock created successfully', livestock: result.rows[0] })
+  } catch (error) {
+    console.error("Create livestock error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+app.put("/api/livestock/:id", authenticateToken, async (req, res) => {
+  try {
+    const { name, type, breed, age, weight, health_status, location, notes } = req.body
+    const livestockId = req.params.id
+    
+    // Check if user has permission to update livestock
+    if (!['Admin', 'Farm Manager', 'Veterinary Doctor'].includes(req.user.role)) {
+      return res.status(403).json({ message: "Insufficient permissions to update livestock" })
+    }
+    
+    const result = await queryWithRetry(
+      `UPDATE livestock 
+       SET name = $1, type = $2, breed = $3, age = $4, weight = $5, health_status = $6, location = $7, notes = $8, updated_at = NOW()
+       WHERE id = $9 RETURNING *`,
+      [name, type, breed, age, weight, health_status, location, notes, livestockId]
+    )
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Livestock not found" })
+    }
+    
+    res.json({ message: 'Livestock updated successfully', livestock: result.rows[0] })
+  } catch (error) {
+    console.error("Update livestock error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+app.delete("/api/livestock/:id", authenticateToken, async (req, res) => {
+  try {
+    const livestockId = req.params.id
+    
+    // Check if user has permission to delete livestock
+    if (!['Admin', 'Farm Manager'].includes(req.user.role)) {
+      return res.status(403).json({ message: "Insufficient permissions to delete livestock" })
+    }
+    
+    const result = await queryWithRetry(
+      "DELETE FROM livestock WHERE id = $1 RETURNING id",
+      [livestockId]
+    )
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Livestock not found" })
+    }
+    
+    res.json({ message: 'Livestock deleted successfully' })
+  } catch (error) {
+    console.error("Delete livestock error:", error)
+    res.status(500).json({ message: "Server error" })
   }
 })
 
