@@ -15,10 +15,30 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Auto-logout on 401/403
+api.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    const status = error?.response?.status
+    if (status === 401 || status === 403) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      if (window.location.pathname !== '/login') {
+        window.location.replace('/login')
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+
 // Auth API
 export const authAPI = {
   login: (credentials) => api.post("/auth/login", credentials),
   register: (userData) => api.post("/auth/register", userData),
+  requestVerification: () => api.post('/auth/request-verification'),
+  verifyEmail: (token) => api.get('/auth/verify', { params: { token } }),
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (data) => api.post('/auth/reset-password', data),
 }
 
 // User API
@@ -58,6 +78,8 @@ export const eventsAPI = {
 export const reportsAPI = {
   getStats: (params) => api.get("/reports/stats", { params }),
   getStaffPerformance: (params) => api.get("/reports/staff-performance", { params }),
+  getCompletionTrend: (params) => api.get('/reports/completion-trend', { params }),
+  getTaskDistribution: (params) => api.get('/reports/task-distribution', { params }),
   exportReport: (params) => api.get("/reports/export", { params, responseType: "blob" }),
 }
 

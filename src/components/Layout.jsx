@@ -21,15 +21,17 @@ const Layout = ({ children }) => {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const handleLogout = () => {
-    logout();
-    navigate("/login");
+    if (window.confirm('Are you sure you want to log out?')) {
+      logout();
+      navigate("/login");
+    }
   };
 
   	const navigation = [
 		{ name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
 		{ name: "Tasks", href: "/tasks", icon: CheckSquare },
 		{ name: "Calendar", href: "/calendar", icon: Calendar },
-		...(user?.role === "Admin" ? [{ name: "Reports", href: "/reports", icon: BarChart3 }] : []),
+		...((user?.role === "Admin" || user?.role === "Admin User") ? [{ name: "Reports", href: "/reports", icon: BarChart3 }] : []),
 	];
 
   return (
@@ -52,7 +54,7 @@ const Layout = ({ children }) => {
       {/* Top Navigation Bar */}
       <nav className="relative z-10 w-full bg-white shadow-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between lg:hidden">
         <div className="flex items-center gap-3">
-          {/* <CompanyLogo /> */}
+          <img src="/android-chrome-192x192.png" alt="Logo" className="h-8 w-8 rounded" />
           <span className="font-bold text-lg text-gray-900">Alliance CropCraft</span>
         </div>
         <div className="flex items-center gap-4">
@@ -94,7 +96,7 @@ const Layout = ({ children }) => {
       )}
       <div className={`fixed top-0 left-0 z-30 w-64 h-full bg-white shadow-lg transform ${menuOpen ? "translate-x-0" : "-translate-x-full"} transition-transform duration-300 lg:hidden`}>
         <div className="p-6 border-b border-gray-200 flex items-center gap-3">
-          {/* <CompanyLogo /> */}
+          <img src="/android-chrome-192x192.png" alt="Logo" className="h-8 w-8 rounded" />
           <span className="font-bold text-lg text-gray-900">Alliance CropCraft</span>
         </div>
         <nav className="flex-1 p-4 space-y-2">
@@ -135,7 +137,7 @@ const Layout = ({ children }) => {
         {/* Sidebar for desktop */}
         <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:min-h-screen bg-white shadow-lg border-r border-gray-200 z-20">
           <div className="p-6 border-b border-gray-200 flex items-center gap-3">
-            {/* <CompanyLogo /> */}
+            <img src="/android-chrome-192x192.png" alt="Logo" className="h-8 w-8 rounded" />
             <span className="font-bold text-lg text-gray-900">Alliance CropCraft</span>
           </div>
           <nav className="flex-1 p-4 space-y-2">
