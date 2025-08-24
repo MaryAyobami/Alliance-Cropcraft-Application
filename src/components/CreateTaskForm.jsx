@@ -49,10 +49,9 @@ const CreateTaskForm = ({ onTaskCreated, onCancel }) => {
     if (!formData.due_date) {
       errors.due_date = "Due date is required"
     } else {
-      const selectedDate = new Date(formData.due_date)
-      selectedDate.setHours(0, 0, 0, 0)
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
+      // Compare date strings directly to avoid timezone issues
+      const selectedDate = formData.due_date
+      const today = new Date().toISOString().split('T')[0]
       
       if (selectedDate < today) {
         errors.due_date = "Due date cannot be in the past"
@@ -163,7 +162,8 @@ const CreateTaskForm = ({ onTaskCreated, onCancel }) => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto px-1">
+    <div className="max-h-[90vh] sm:max-h-[80vh] overflow-y-auto">
+    <form onSubmit={handleSubmit} className="space-y-4 px-1 pb-4">
       <div className="flex items-center justify-between sticky top-0 bg-white pt-2 pb-4 z-10">
         <h2 className="text-xl font-semibold text-gray-900">Create New Task</h2>
         {onCancel && (
@@ -331,6 +331,7 @@ const CreateTaskForm = ({ onTaskCreated, onCancel }) => {
         )}
       </button>
     </form>
+    </div>
   )
 }
 

@@ -32,6 +32,7 @@ export const userAPI = {
   updateProfile: (userData) => api.put("/users/profile", userData),
   getUsers: () => api.get("/users"),
   createUser: (userData) => api.post("/users", userData),
+  updateUser: (userId, userData) => api.put(`/users/${userId}`, userData),
   uploadAvatar: (formData) => api.post("/users/avatar", formData),
   changePassword: (data) => api.put("/users/password", data),
   updateNotifications: (formData) => api.put("/users/notifications", formData),
@@ -47,6 +48,8 @@ export const tasksAPI = {
   getTasks: () => api.get("/tasks"),
   completeTask: (taskId) => api.put(`/tasks/${taskId}/complete`),
   createTask: (taskData) => api.post("/tasks", taskData),
+  updateTask: (taskId, taskData) => api.put(`/tasks/${taskId}`, taskData),
+  deleteTask: (taskId) => api.delete(`/tasks/${taskId}`),
   completeTaskWithEvidence: (taskData) =>
     api.post(`/tasks/${taskData.get('taskId')}/complete-with-evidence`, taskData),
   getTaskDetails: (taskId) => api.get(`/tasks/${taskId}/details`),
