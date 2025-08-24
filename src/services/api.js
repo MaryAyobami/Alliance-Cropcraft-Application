@@ -33,6 +33,7 @@ export const userAPI = {
   getUsers: () => api.get("/users"),
   createUser: (userData) => api.post("/users", userData),
   updateUser: (userId, userData) => api.put(`/users/${userId}`, userData),
+  deleteUser: (userId) => api.delete(`/users/${userId}`),
   uploadAvatar: (formData) => api.post("/users/avatar", formData),
   changePassword: (data) => api.put("/users/password", data),
   updateNotifications: (formData) => api.put("/users/notifications", formData),
@@ -79,6 +80,24 @@ export const livestockAPI = {
   createLivestock: (livestockData) => api.post("/livestock", livestockData),
   updateLivestock: (id, livestockData) => api.put(`/livestock/${id}`, livestockData),
   deleteLivestock: (id) => api.delete(`/livestock/${id}`),
+}
+
+// Farm Resources API
+export const farmResourcesAPI = {
+  getResources: () => api.get("/farm-resources"),
+  getResourceById: (id) => api.get(`/farm-resources/${id}`),
+  createResource: (resourceData) => api.post("/farm-resources", resourceData),
+  updateResource: (id, resourceData) => api.put(`/farm-resources/${id}`, resourceData),
+  deleteResource: (id) => api.delete(`/farm-resources/${id}`),
+}
+
+// Planting Tracker API
+export const plantingAPI = {
+  getPlantings: () => api.get("/plantings"),
+  getPlantingById: (id) => api.get(`/plantings/${id}`),
+  createPlanting: (plantingData) => api.post("/plantings", plantingData),
+  updatePlanting: (id, plantingData) => api.put(`/plantings/${id}`, plantingData),
+  deletePlanting: (id) => api.delete(`/plantings/${id}`),
 }
 
 export const subscribePush = (subscription) =>

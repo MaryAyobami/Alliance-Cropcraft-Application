@@ -22,7 +22,7 @@ const Dashboard = () => {
 
         setStats(statsResponse.data)
         setTasks(tasksResponse.data)
-        console.log(statsResponse.data)
+
       } catch (error) {
         console.error("Error fetching dashboard data:", error)
       } finally {
@@ -43,7 +43,7 @@ const Dashboard = () => {
           `https://api.openweathermap.org/data/2.5/weather?lat=${farmLocation.lat}&lon=${farmLocation.lon}&appid=f4d6cec31b04951c0ac2ac398f1a3c40&units=metric`
         )
         
-        console.log(response)
+
         if (response.ok) {
           const data = await response.json()
           setWeather({

@@ -69,11 +69,7 @@ const Tasks = () => {
   const fetchTasks = async () => {
     try {
       const response = await tasksAPI.getTasks()
-      console.log("=== DEBUGGING API RESPONSE ===")
-      console.log("Full response object:", response)
-      console.log("Response.data:", response.data)
-      console.log("Type of response.data:", typeof response.data)
-      console.log("Is response.data an array?", Array.isArray(response.data))
+
       
       // Handle different possible response structures
       let tasksData = []
@@ -92,12 +88,7 @@ const Tasks = () => {
         }
       }
       
-      console.log("Extracted tasks data:", tasksData)
-      console.log("Number of tasks:", tasksData.length)
-      
-      if (tasksData.length > 0) {
-        console.log("First task structure:", tasksData[0])
-      }
+
       
       const today = format(new Date(), "yyyy-MM-dd")
 
@@ -122,7 +113,7 @@ const Tasks = () => {
         return false
       })
 
-      console.log("Today's tasks:", todaysTasks)
+
       setTasks(todaysTasks)
 
     } catch (error) {
@@ -268,7 +259,7 @@ const Tasks = () => {
 
   // Fixed filtering with proper error handling and debugging
   const filteredTasks = tasks.filter((task) => {
-    console.log("Filtering task:", task, "with filter:", filter)
+
     
     // Ensure task exists and has a status property
     if (!task || typeof task.status !== 'string') {
@@ -282,14 +273,12 @@ const Tasks = () => {
     const filterValue = filter.toLowerCase()
     const matches = taskStatus === filterValue
     
-    console.log(`Task ${task.id} status: "${taskStatus}", filter: "${filterValue}", matches: ${matches}`)
+
     
     return matches
   })
   
-  console.log("Final filtered tasks:", filteredTasks)
-  console.log("Filter state:", filter)
-  console.log("All tasks:", tasks)
+
 
   if (loading) {
     return (

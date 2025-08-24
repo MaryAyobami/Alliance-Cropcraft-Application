@@ -43,8 +43,7 @@ const Profile = () => {
         morningTime: profileRes.data.notif_morning ?? "08:00",
         eveningTime: profileRes.data.notif_evening ?? "18:00"
       })
-      console.log(notifications)
-      console.log(profileRes.data)
+
     } catch (err) {
       // handle error
     }

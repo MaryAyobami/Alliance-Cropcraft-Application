@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { reportsAPI, livestockAPI } from "../services/api"
-import { TrendingUp, Users, DollarSign, Activity, Download, BarChart3, PieChart, Heart, MapPin, Calendar } from "lucide-react"
+import { TrendingUp, Users, Banknote, Activity, Download, BarChart3, PieChart, Heart, MapPin, Calendar } from "lucide-react"
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -424,7 +424,7 @@ const Reports = () => {
             <div className="card-enhanced">
               <div className="flex items-center space-x-4">
                 <div className="w-14 h-14 earth-gradient rounded-xl flex items-center justify-center shadow-lg">
-                  <DollarSign className="w-7 h-7 text-white" />
+                  <Banknote className="w-7 h-7 text-white" />
                 </div>
                 <div>
                   <p className="text-sm text-gray-600 font-medium">Productivity Score</p>
