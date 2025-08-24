@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { userAPI } from "../services/api"
 
 const ExternalUserForm = ({ user: editUser, mode, onUserSaved, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -95,7 +96,6 @@ const ExternalUserForm = ({ user: editUser, mode, onUserSaved, onCancel }) => {
       }
 
       // For now, we'll use the existing user API, but this could be a separate endpoint
-      const userAPI = await import("../services/api").then(module => module.userAPI)
       
       let response
       if (mode === "create") {
