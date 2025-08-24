@@ -100,6 +100,15 @@ export const plantingAPI = {
   deletePlanting: (id) => api.delete(`/plantings/${id}`),
 }
 
+// Livestock Health API
+export const livestockHealthAPI = {
+  getHealthRecords: () => api.get("/livestock-health"),
+  getHealthRecordById: (id) => api.get(`/livestock-health/${id}`),
+  createHealthRecord: (recordData) => api.post("/livestock-health", recordData),
+  updateHealthRecord: (id, recordData) => api.put(`/livestock-health/${id}`, recordData),
+  deleteHealthRecord: (id) => api.delete(`/livestock-health/${id}`),
+}
+
 export const subscribePush = (subscription) =>
   api.post("/notifications/subscribe", subscription)
 

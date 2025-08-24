@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "../contexts/AuthContext"
 import { farmResourcesAPI } from "../services/api"
+import FarmResourceForm from "../components/FarmResourceForm"
 import { 
   Package, 
   Plus, 
@@ -169,6 +170,30 @@ const FarmResources = () => {
     setModalMode("view")
     setSelectedResource(resource)
     setShowModal(true)
+  }
+
+  const handleResourceSaved = (savedResource) => {
+    if (modalMode === "create") {
+      setResources([savedResource, ...resources])
+    } else if (modalMode === "edit") {
+      setResources(resources.map(r => r.id === savedResource.id ? savedResource : r))
+    }
+    setShowModal(false)
+    setSelectedResource(null)
+  }
+
+  const handleDelete = async (resource) => {
+    if (!canManageResources) return
+    
+    if (window.confirm(`Are you sure you want to delete "${resource.name}"? This action cannot be undone.`)) {
+      try {
+        await farmResourcesAPI.deleteResource(resource.id)
+        setResources(resources.filter(r => r.id !== resource.id))
+      } catch (error) {
+        console.error("Failed to delete resource:", error)
+        setError("Failed to delete resource. Please try again.")
+      }
+    }
   }
 
   if (loading) {
@@ -395,7 +420,7 @@ const FarmResources = () => {
                           <span>Edit</span>
                         </button>
                         <button
-                          onClick={() => {/* Handle delete */}}
+                          onClick={() => handleDelete(resource)}
                           className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -459,30 +484,30 @@ const FarmResources = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Expiry Date</label>
-                    <p className="mt-1 text-sm text-gray-900">{new Date(selectedResource.expiry_date).toLocaleDateString()}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedResource.expiry_date ? new Date(selectedResource.expiry_date).toLocaleDateString() : "No expiry date"}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Total Value</label>
                     <p className="mt-1 text-sm text-gray-900">₦{(selectedResource.current_stock * selectedResource.cost_per_unit).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </div>
                 </div>
+                <div className="flex justify-end space-x-3 mt-6">
+                  <button 
+                    onClick={() => setShowModal(false)}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             ) : (
-              <div className="text-center py-8">
-                <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">Resource management form will be implemented with full CRUD operations.</p>
-                <p className="text-sm text-gray-500 mt-2">This includes stock tracking, supplier management, and automated alerts for low stock levels.</p>
-              </div>
+              <FarmResourceForm
+                resource={selectedResource}
+                mode={modalMode}
+                onResourceSaved={handleResourceSaved}
+                onCancel={() => setShowModal(false)}
+              />
             )}
-
-            <div className="flex justify-end space-x-3 mt-6">
-              <button 
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
-              >
-                Close
-              </button>
-            </div>
           </div>
         </div>
       )}

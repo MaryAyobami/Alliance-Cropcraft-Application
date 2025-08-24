@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "../contexts/AuthContext"
-import { livestockAPI } from "../services/api"
+import { livestockAPI, livestockHealthAPI } from "../services/api"
+import HealthRecordForm from "../components/HealthRecordForm"
 import { 
   Heart, 
   Plus, 
   Edit, 
+  Trash2,
   Search, 
   Filter, 
   Activity,
@@ -33,6 +35,10 @@ const LivestockHealth = () => {
   const [selectedRecord, setSelectedRecord] = useState(null)
   const [selectedAnimal, setSelectedAnimal] = useState("")
 
+  // Role-based permissions
+  const canManageHealth = ["Admin", "Farm Manager", "Veterinary Doctor"].includes(user?.role)
+  const canDeleteRecords = ["Admin", "Farm Manager"].includes(user?.role)
+
   useEffect(() => {
     fetchLivestock()
   }, [])
@@ -40,13 +46,27 @@ const LivestockHealth = () => {
   const fetchLivestock = async () => {
     try {
       setLoading(true)
-      const response = await livestockAPI.getLivestock()
-      setLivestock(response.data)
-      generateHealthRecords(response.data)
+      const [livestockResponse, healthResponse] = await Promise.all([
+        livestockAPI.getLivestock(),
+        livestockHealthAPI.getHealthRecords()
+      ])
+      
+      setLivestock(livestockResponse.data)
+      setHealthRecords(healthResponse.data)
       setError("")
     } catch (error) {
-      console.error("Failed to fetch livestock:", error)
+      console.error("Failed to fetch data:", error)
       setError("Failed to load livestock data. Please try again.")
+      // Fallback to mock data generation if API fails
+      try {
+        const response = await livestockAPI.getLivestock()
+        setLivestock(response.data)
+        generateHealthRecords(response.data)
+      } catch {
+        // If all else fails, provide empty data
+        setLivestock([])
+        setHealthRecords([])
+      }
     } finally {
       setLoading(false)
     }
@@ -181,12 +201,14 @@ const LivestockHealth = () => {
   })
 
   const handleCreate = () => {
+    if (!canManageHealth) return
     setModalMode("create")
     setSelectedRecord(null)
     setShowModal(true)
   }
 
   const handleEdit = (record) => {
+    if (!canManageHealth) return
     setModalMode("edit")
     setSelectedRecord(record)
     setShowModal(true)
@@ -196,6 +218,30 @@ const LivestockHealth = () => {
     setModalMode("view")
     setSelectedRecord(record)
     setShowModal(true)
+  }
+
+  const handleRecordSaved = (savedRecord) => {
+    if (modalMode === "create") {
+      setHealthRecords([savedRecord, ...healthRecords])
+    } else if (modalMode === "edit") {
+      setHealthRecords(healthRecords.map(r => r.id === savedRecord.id ? savedRecord : r))
+    }
+    setShowModal(false)
+    setSelectedRecord(null)
+  }
+
+  const handleDelete = async (record) => {
+    if (!canDeleteRecords) return
+    
+    if (window.confirm(`Are you sure you want to delete this health record? This action cannot be undone.`)) {
+      try {
+        await livestockHealthAPI.deleteHealthRecord(record.id)
+        setHealthRecords(healthRecords.filter(r => r.id !== record.id))
+      } catch (error) {
+        console.error("Failed to delete health record:", error)
+        setError("Failed to delete health record. Please try again.")
+      }
+    }
   }
 
   const getUpcomingDueDates = () => {
@@ -226,13 +272,15 @@ const LivestockHealth = () => {
           <h1 className="text-3xl font-bold text-gray-900">Livestock Health Management</h1>
           <p className="text-gray-600 mt-2">Track health, vaccinations, breeding, and feeding records</p>
         </div>
-        <button
-          onClick={handleCreate}
-          className="mt-4 sm:mt-0 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-xl flex items-center space-x-2 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Add Health Record</span>
-        </button>
+        {canManageHealth && (
+          <button
+            onClick={handleCreate}
+            className="mt-4 sm:mt-0 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-xl flex items-center space-x-2 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Add Health Record</span>
+          </button>
+        )}
       </div>
 
       {/* Error Message */}
@@ -448,19 +496,31 @@ const LivestockHealth = () => {
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleView(record)}
-                          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1"
+                          className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-1"
                         >
                           <Eye className="w-4 h-4" />
                           <span>View</span>
                         </button>
                         
-                        <button
-                          onClick={() => handleEdit(record)}
-                          className="bg-primary-100 hover:bg-primary-200 text-primary-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1"
-                        >
-                          <Edit className="w-4 h-4" />
-                          <span>Edit</span>
-                        </button>
+                        {canManageHealth && (
+                          <>
+                            <button
+                              onClick={() => handleEdit(record)}
+                              className="flex-1 bg-primary-100 hover:bg-primary-200 text-primary-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-1"
+                            >
+                              <Edit className="w-4 h-4" />
+                              <span>Edit</span>
+                            </button>
+                            {canDeleteRecords && (
+                              <button
+                                onClick={() => handleDelete(record)}
+                                className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -488,20 +548,72 @@ const LivestockHealth = () => {
               </button>
             </div>
 
-            <div className="text-center py-8">
-              <Heart className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">Health record form will be implemented with comprehensive tracking.</p>
-              <p className="text-sm text-gray-500 mt-2">This will include vaccination schedules, breeding records, feeding plans, and treatment history.</p>
-            </div>
-
-            <div className="flex justify-end space-x-3 mt-6">
-              <button 
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
-              >
-                Close
-              </button>
-            </div>
+            {modalMode === "view" && selectedRecord ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Animal</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedRecord.animal_name}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Record Type</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedRecord.record_type?.replace('_', ' ')}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Date</label>
+                    <p className="mt-1 text-sm text-gray-900">{new Date(selectedRecord.record_date).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Veterinarian</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedRecord.veterinarian || "Not specified"}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700">Description</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedRecord.description}</p>
+                  </div>
+                  {selectedRecord.treatment && (
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700">Treatment</label>
+                      <p className="mt-1 text-sm text-gray-900">{selectedRecord.treatment}</p>
+                    </div>
+                  )}
+                  {selectedRecord.cost > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Cost</label>
+                      <p className="mt-1 text-sm text-gray-900">₦{selectedRecord.cost.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    </div>
+                  )}
+                  {selectedRecord.next_due_date && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Next Due Date</label>
+                      <p className="mt-1 text-sm text-gray-900">{new Date(selectedRecord.next_due_date).toLocaleDateString()}</p>
+                    </div>
+                  )}
+                  {selectedRecord.notes && (
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700">Notes</label>
+                      <p className="mt-1 text-sm text-gray-900">{selectedRecord.notes}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex justify-end space-x-3 mt-6">
+                  <button 
+                    onClick={() => setShowModal(false)}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <HealthRecordForm
+                record={selectedRecord}
+                mode={modalMode}
+                livestock={livestock}
+                onRecordSaved={handleRecordSaved}
+                onCancel={() => setShowModal(false)}
+              />
+            )}
           </div>
         </div>
       )}

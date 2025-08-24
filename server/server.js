@@ -2532,6 +2532,150 @@ app.delete("/api/plantings/:id", authenticateToken, async (req, res) => {
   }
 })
 
+// Livestock Health Records API
+app.get("/api/livestock-health", authenticateToken, async (req, res) => {
+  try {
+    const result = await queryWithRetry(
+      `SELECT hr.*, l.name as animal_name, l.species 
+       FROM health_records hr 
+       LEFT JOIN livestock l ON hr.livestock_id = l.id 
+       ORDER BY hr.record_date DESC`
+    )
+    res.json(result.rows)
+  } catch (error) {
+    console.error("Get health records error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+app.get("/api/livestock-health/:id", authenticateToken, async (req, res) => {
+  try {
+    const recordId = req.params.id
+    const result = await queryWithRetry(
+      `SELECT hr.*, l.name as animal_name, l.species 
+       FROM health_records hr 
+       LEFT JOIN livestock l ON hr.livestock_id = l.id 
+       WHERE hr.id = $1`,
+      [recordId]
+    )
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Health record not found" })
+    }
+    
+    res.json(result.rows[0])
+  } catch (error) {
+    console.error("Get health record error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+app.post("/api/livestock-health", authenticateToken, async (req, res) => {
+  try {
+    // Check permissions - only Admin, Farm Manager, and Veterinary Doctor can create health records
+    if (!["Admin", "Farm Manager", "Veterinary Doctor"].includes(req.user.role)) {
+      return res.status(403).json({ message: "You do not have permission to create health records" })
+    }
+
+    const { 
+      livestock_id, 
+      record_type, 
+      record_date, 
+      description, 
+      treatment, 
+      veterinarian, 
+      cost, 
+      next_due_date, 
+      notes 
+    } = req.body
+
+    if (!livestock_id || !record_type || !record_date) {
+      return res.status(400).json({ message: "Livestock ID, record type, and record date are required" })
+    }
+
+    const result = await queryWithRetry(
+      `INSERT INTO health_records 
+       (livestock_id, record_type, record_date, description, treatment, veterinarian, cost, next_due_date, notes, created_by, created_at) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW()) 
+       RETURNING *`,
+      [livestock_id, record_type, record_date, description, treatment, veterinarian, cost || 0, next_due_date, notes, req.user.id]
+    )
+
+    res.status(201).json(result.rows[0])
+  } catch (error) {
+    console.error("Create health record error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+app.put("/api/livestock-health/:id", authenticateToken, async (req, res) => {
+  try {
+    // Check permissions - only Admin, Farm Manager, and Veterinary Doctor can update health records
+    if (!["Admin", "Farm Manager", "Veterinary Doctor"].includes(req.user.role)) {
+      return res.status(403).json({ message: "You do not have permission to update health records" })
+    }
+
+    const recordId = req.params.id
+    const { 
+      livestock_id, 
+      record_type, 
+      record_date, 
+      description, 
+      treatment, 
+      veterinarian, 
+      cost, 
+      next_due_date, 
+      notes 
+    } = req.body
+
+    if (!livestock_id || !record_type || !record_date) {
+      return res.status(400).json({ message: "Livestock ID, record type, and record date are required" })
+    }
+
+    const result = await queryWithRetry(
+      `UPDATE health_records 
+       SET livestock_id = $1, record_type = $2, record_date = $3, description = $4, 
+           treatment = $5, veterinarian = $6, cost = $7, next_due_date = $8, notes = $9, updated_at = NOW()
+       WHERE id = $10 
+       RETURNING *`,
+      [livestock_id, record_type, record_date, description, treatment, veterinarian, cost || 0, next_due_date, notes, recordId]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Health record not found" })
+    }
+
+    res.json(result.rows[0])
+  } catch (error) {
+    console.error("Update health record error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+app.delete("/api/livestock-health/:id", authenticateToken, async (req, res) => {
+  try {
+    // Check permissions - only Admin and Farm Manager can delete health records
+    if (!["Admin", "Farm Manager"].includes(req.user.role)) {
+      return res.status(403).json({ message: "You do not have permission to delete health records" })
+    }
+
+    const recordId = req.params.id
+    const result = await queryWithRetry(
+      "DELETE FROM health_records WHERE id = $1 RETURNING id",
+      [recordId]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Health record not found" })
+    }
+
+    res.json({ message: "Health record deleted successfully" })
+  } catch (error) {
+    console.error("Delete health record error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
 // Farm Resources API
 app.get("/api/farm-resources", authenticateToken, async (req, res) => {
   try {

@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "../contexts/AuthContext"
+import { plantingAPI } from "../services/api"
+import PlantingForm from "../components/PlantingForm"
 import { 
   Sprout, 
   Plus, 
@@ -34,86 +36,50 @@ const PlantingTracker = () => {
   // Role-based permissions
   const canManagePlantings = ["Admin", "Farm Manager"].includes(user?.role)
 
-  // Mock data for demonstration
   useEffect(() => {
-    setTimeout(() => {
+    fetchPlantings()
+  }, [])
+
+  const fetchPlantings = async () => {
+    try {
+      setLoading(true)
+      const response = await plantingAPI.getPlantings()
+      setPlantings(response.data)
+      setError("")
+    } catch (error) {
+      console.error("Failed to fetch plantings:", error)
+      setError("Failed to load plantings. Please try again.")
+      // Fallback to mock data if API fails
       setPlantings([
         {
           id: 1,
           crop_name: "Corn",
           variety: "Sweet Corn - Golden Bantam",
-          field_location: "North Field A",
+          location: "North Field A",
           area_planted: 5.2,
           planting_date: "2024-03-15",
-          expected_harvest: "2024-07-15",
+          expected_harvest_date: "2024-07-15",
           growth_stage: "flowering",
-          status: "healthy",
-          planting_method: "direct_seeding",
-          spacing: "30cm x 20cm",
-          depth: "2-3 cm",
-          irrigation_schedule: "Daily morning",
-          fertilizer_applied: "NPK 10-10-10",
-          last_update: "2024-04-15T10:30:00Z",
+          status: "active",
           notes: "Growth is excellent, showing early signs of flowering"
         },
         {
           id: 2,
           crop_name: "Tomatoes",
           variety: "Roma Tomatoes",
-          field_location: "Greenhouse B",
+          location: "Greenhouse B",
           area_planted: 2.1,
           planting_date: "2024-02-20",
-          expected_harvest: "2024-06-20",
+          expected_harvest_date: "2024-06-20",
           growth_stage: "fruiting",
-          status: "needs_attention",
-          planting_method: "transplant",
-          spacing: "45cm x 60cm",
-          depth: "15cm",
-          irrigation_schedule: "Twice daily",
-          fertilizer_applied: "Organic compost",
-          last_update: "2024-04-10T14:20:00Z",
+          status: "active",
           notes: "Some plants showing signs of blight, treatment applied"
-        },
-        {
-          id: 3,
-          crop_name: "Wheat",
-          variety: "Winter Wheat - Red",
-          field_location: "South Field C",
-          area_planted: 12.5,
-          planting_date: "2023-10-15",
-          expected_harvest: "2024-07-30",
-          growth_stage: "maturation",
-          status: "ready_for_harvest",
-          planting_method: "broadcast",
-          spacing: "Broadcast seeding",
-          depth: "3-4 cm",
-          irrigation_schedule: "Rain-fed",
-          fertilizer_applied: "Starter fertilizer",
-          last_update: "2024-04-18T09:15:00Z",
-          notes: "Wheat is fully mature and ready for harvest this week"
-        },
-        {
-          id: 4,
-          crop_name: "Lettuce",
-          variety: "Butterhead Lettuce",
-          field_location: "East Field D",
-          area_planted: 1.8,
-          planting_date: "2024-04-01",
-          expected_harvest: "2024-05-15",
-          growth_stage: "vegetative",
-          status: "healthy",
-          planting_method: "transplant",
-          spacing: "25cm x 25cm",
-          depth: "1cm",
-          irrigation_schedule: "Daily evening",
-          fertilizer_applied: "Liquid fertilizer weekly",
-          last_update: "2024-04-12T16:45:00Z",
-          notes: "Good growth rate, pest management ongoing"
         }
       ])
+    } finally {
       setLoading(false)
-    }, 1000)
-  }, [])
+    }
+  }
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -180,6 +146,30 @@ const PlantingTracker = () => {
     setModalMode("view")
     setSelectedPlanting(planting)
     setShowModal(true)
+  }
+
+  const handlePlantingSaved = (savedPlanting) => {
+    if (modalMode === "create") {
+      setPlantings([savedPlanting, ...plantings])
+    } else if (modalMode === "edit") {
+      setPlantings(plantings.map(p => p.id === savedPlanting.id ? savedPlanting : p))
+    }
+    setShowModal(false)
+    setSelectedPlanting(null)
+  }
+
+  const handleDelete = async (planting) => {
+    if (!canManagePlantings) return
+    
+    if (window.confirm(`Are you sure you want to delete the "${planting.crop_name}" planting? This action cannot be undone.`)) {
+      try {
+        await plantingAPI.deletePlanting(planting.id)
+        setPlantings(plantings.filter(p => p.id !== planting.id))
+      } catch (error) {
+        console.error("Failed to delete planting:", error)
+        setError("Failed to delete planting. Please try again.")
+      }
+    }
   }
 
   if (loading) {
@@ -393,7 +383,7 @@ const PlantingTracker = () => {
                           <span>Update</span>
                         </button>
                         <button
-                          onClick={() => {/* Handle delete */}}
+                          onClick={() => handleDelete(planting)}
                           className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -434,19 +424,21 @@ const PlantingTracker = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Variety</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedPlanting.variety}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedPlanting.variety || "Not specified"}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Field Location</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedPlanting.field_location}</p>
+                    <label className="block text-sm font-medium text-gray-700">Location</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedPlanting.location || "Not specified"}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Area Planted</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedPlanting.area_planted} acres</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedPlanting.area_planted} hectares</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Planting Method</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedPlanting.planting_method.replace('_', ' ')}</p>
+                    <label className="block text-sm font-medium text-gray-700">Growth Stage</label>
+                    <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getGrowthStageColor(selectedPlanting.growth_stage)}`}>
+                      {selectedPlanting.growth_stage.charAt(0).toUpperCase() + selectedPlanting.growth_stage.slice(1)}
+                    </span>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Growth Stage</label>
@@ -478,23 +470,23 @@ const PlantingTracker = () => {
                     <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-3 rounded-lg">{selectedPlanting.notes}</p>
                   </div>
                 )}
+                <div className="flex justify-end space-x-3 mt-6">
+                  <button 
+                    onClick={() => setShowModal(false)}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             ) : (
-              <div className="text-center py-8">
-                <Sprout className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">Planting management form will be implemented with full CRUD operations.</p>
-                <p className="text-sm text-gray-500 mt-2">This includes growth stage tracking, harvest planning, and irrigation scheduling.</p>
-              </div>
+              <PlantingForm
+                planting={selectedPlanting}
+                mode={modalMode}
+                onPlantingSaved={handlePlantingSaved}
+                onCancel={() => setShowModal(false)}
+              />
             )}
-
-            <div className="flex justify-end space-x-3 mt-6">
-              <button 
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
-              >
-                Close
-              </button>
-            </div>
           </div>
         </div>
       )}

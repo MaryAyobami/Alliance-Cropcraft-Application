@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { useAuth } from "../contexts/AuthContext"
 import { userAPI } from "../services/api"
 import UserForm from "../components/UserForm"
+import ExternalUserForm from "../components/ExternalUserForm"
 import { 
   Users as UsersIcon, 
   Plus, 
@@ -28,7 +29,9 @@ const Users = () => {
   const [filterRole, setFilterRole] = useState("")
   const [filterCategory, setFilterCategory] = useState("all") // all, staff, external
   const [showModal, setShowModal] = useState(false)
+  const [showExternalModal, setShowExternalModal] = useState(false)
   const [modalMode, setModalMode] = useState("create") // create, edit, view
+  const [externalModalMode, setExternalModalMode] = useState("create") // create, edit, view
   const [selectedUser, setSelectedUser] = useState(null)
 
   // Role-based permissions
@@ -97,6 +100,13 @@ const Users = () => {
     setShowModal(true)
   }
 
+  const handleCreateExternal = () => {
+    if (!canManageUsers) return
+    setExternalModalMode("create")
+    setSelectedUser(null)
+    setShowExternalModal(true)
+  }
+
   const handleEdit = (userToEdit) => {
     if (!canManageUsers) return
     setModalMode("edit")
@@ -120,6 +130,16 @@ const Users = () => {
     setSelectedUser(null)
   }
 
+  const handleExternalUserSaved = (savedUser) => {
+    if (externalModalMode === "create") {
+      setUsers([...users, savedUser])
+    } else if (externalModalMode === "edit") {
+      setUsers(users.map(u => u.id === savedUser.id ? savedUser : u))
+    }
+    setShowExternalModal(false)
+    setSelectedUser(null)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-96">
@@ -137,13 +157,22 @@ const Users = () => {
           <p className="text-gray-600 mt-2">Manage staff and external users</p>
         </div>
         {canManageUsers && (
-          <button
-            onClick={handleCreate}
-            className="mt-4 sm:mt-0 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-xl flex items-center space-x-2 transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Add User</span>
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2 mt-4 sm:mt-0">
+            <button
+              onClick={handleCreate}
+              className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-xl flex items-center space-x-2 transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Add Staff User</span>
+            </button>
+            <button
+              onClick={handleCreateExternal}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl flex items-center space-x-2 transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Add External User</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -434,6 +463,33 @@ const Users = () => {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* External User Modal - Create/Edit External User */}
+      {showExternalModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">
+                {externalModalMode === "create" ? "Add External User" : 
+                 externalModalMode === "edit" ? "Edit External User" : "External User Details"}
+              </h3>
+              <button 
+                onClick={() => setShowExternalModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <ExternalUserForm
+              user={selectedUser}
+              mode={externalModalMode}
+              onUserSaved={handleExternalUserSaved}
+              onCancel={() => setShowExternalModal(false)}
+            />
           </div>
         </div>
       )}
