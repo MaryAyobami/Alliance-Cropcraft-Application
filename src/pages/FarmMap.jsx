@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Map, MapPin, Layers, Zap, Home, Barn, Tractor, Info, X } from "lucide-react"
+import { Map, MapPin, Layers, Zap, Home, Info, X } from "lucide-react"
 
 const FarmMap = () => {
   const [selectedLayer, setSelectedLayer] = useState("overview")
@@ -7,9 +7,9 @@ const FarmMap = () => {
 
   const mapLayers = [
     { id: "overview", name: "Overview", icon: Map },
-    { id: "livestock", name: "Livestock Areas", icon: Barn },
+    { id: "livestock", name: "Livestock Areas", icon: MapPin },
     { id: "crops", name: "Crop Fields", icon: Layers },
-    { id: "equipment", name: "Equipment", icon: Tractor },
+    { id: "equipment", name: "Equipment", icon: X },
     { id: "infrastructure", name: "Infrastructure", icon: Home }
   ]
 
@@ -185,7 +185,7 @@ const FarmMap = () => {
               <p className="text-sm font-medium text-gray-600">Livestock Areas</p>
               <p className="text-2xl font-bold text-gray-900">8</p>
             </div>
-            <Barn className="w-8 h-8 text-brown-600" />
+            <Home className="w-8 h-8 text-brown-600" />
           </div>
         </div>
 
@@ -195,7 +195,7 @@ const FarmMap = () => {
               <p className="text-sm font-medium text-gray-600">Equipment Points</p>
               <p className="text-2xl font-bold text-gray-900">15</p>
             </div>
-            <Tractor className="w-8 h-8 text-orange-600" />
+            <Home className="w-8 h-8 text-orange-600" />
           </div>
         </div>
       </div>
