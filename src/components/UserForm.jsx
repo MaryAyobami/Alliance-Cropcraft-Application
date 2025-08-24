@@ -32,6 +32,10 @@ const UserForm = ({ user: editUser, mode, onUserSaved, onCancel }) => {
     availableRoles.unshift("Farm Manager", "Admin")
   }
 
+  // Define external user roles that don't need passwords or email verification
+  const externalRoles = ["Vendor", "Contractor", "Visitor", "Other"]
+  const isExternalUser = externalRoles.includes(formData.role)
+
   useEffect(() => {
     if (editUser && mode === "edit") {
       setFormData({
@@ -52,9 +56,14 @@ const UserForm = ({ user: editUser, mode, onUserSaved, onCancel }) => {
       errors.full_name = "Full name is required"
     }
 
-    if (!formData.email.trim()) {
-      errors.email = "Email is required"
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    // Email is optional for external users
+    if (!isExternalUser) {
+      if (!formData.email.trim()) {
+        errors.email = "Email is required"
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        errors.email = "Please enter a valid email address"
+      }
+    } else if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       errors.email = "Please enter a valid email address"
     }
 
@@ -62,19 +71,30 @@ const UserForm = ({ user: editUser, mode, onUserSaved, onCancel }) => {
       errors.role = "Role is required"
     }
 
-    // Password validation for new users
-    if (mode === "create") {
-      if (!formData.password) {
-        errors.password = "Password is required"
-      } else if (formData.password.length < 6) {
-        errors.password = "Password must be at least 6 characters"
-      }
+    // Password validation - not required for external users
+    if (!isExternalUser) {
+      if (mode === "create") {
+        if (!formData.password) {
+          errors.password = "Password is required"
+        } else if (formData.password.length < 6) {
+          errors.password = "Password must be at least 6 characters"
+        }
 
-      if (formData.password !== formData.confirmPassword) {
-        errors.confirmPassword = "Passwords do not match"
+        if (formData.password !== formData.confirmPassword) {
+          errors.confirmPassword = "Passwords do not match"
+        }
+      } else if (mode === "edit" && formData.password) {
+        // Optional password change for edit mode
+        if (formData.password.length < 6) {
+          errors.password = "Password must be at least 6 characters"
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+          errors.confirmPassword = "Passwords do not match"
+        }
       }
-    } else if (mode === "edit" && formData.password) {
-      // Optional password change for edit mode
+    } else if (formData.password) {
+      // External users can optionally have passwords, but if provided they must be valid
       if (formData.password.length < 6) {
         errors.password = "Password must be at least 6 characters"
       }
@@ -111,9 +131,13 @@ const UserForm = ({ user: editUser, mode, onUserSaved, onCancel }) => {
     try {
       const submitData = {
         full_name: formData.full_name,
-        email: formData.email,
         phone: formData.phone,
         role: formData.role
+      }
+
+      // Add email only if provided (required for staff, optional for external)
+      if (formData.email.trim()) {
+        submitData.email = formData.email
       }
 
       // Add password only if provided
@@ -183,7 +207,8 @@ const UserForm = ({ user: editUser, mode, onUserSaved, onCancel }) => {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Email <span className="text-red-500">*</span>
+            Email {!isExternalUser && <span className="text-red-500">*</span>}
+            {isExternalUser && <span className="text-gray-500 text-xs">(Optional for external users)</span>}
           </label>
           <input
             type="email"
@@ -191,7 +216,7 @@ const UserForm = ({ user: editUser, mode, onUserSaved, onCancel }) => {
             value={formData.email}
             onChange={handleChange}
             className={getFieldClassName('email')}
-            placeholder="Enter email address"
+            placeholder={isExternalUser ? "Enter email address (optional)" : "Enter email address"}
           />
           {fieldErrors.email && (
             <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>
@@ -235,7 +260,8 @@ const UserForm = ({ user: editUser, mode, onUserSaved, onCancel }) => {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             {mode === "create" ? "Password" : "New Password"} 
-            {mode === "create" && <span className="text-red-500">*</span>}
+            {mode === "create" && !isExternalUser && <span className="text-red-500">*</span>}
+            {isExternalUser && <span className="text-gray-500 text-xs">(Not required for external users)</span>}
           </label>
           <input
             type="password"
@@ -243,7 +269,7 @@ const UserForm = ({ user: editUser, mode, onUserSaved, onCancel }) => {
             value={formData.password}
             onChange={handleChange}
             className={getFieldClassName('password')}
-            placeholder={mode === "create" ? "Enter password" : "Leave blank to keep current password"}
+            placeholder={isExternalUser ? "Enter password (optional)" : (mode === "create" ? "Enter password" : "Leave blank to keep current password")}
           />
           {fieldErrors.password && (
             <p className="text-red-500 text-xs mt-1">{fieldErrors.password}</p>
@@ -253,7 +279,8 @@ const UserForm = ({ user: editUser, mode, onUserSaved, onCancel }) => {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             {mode === "create" ? "Confirm Password" : "Confirm New Password"}
-            {mode === "create" && <span className="text-red-500">*</span>}
+            {mode === "create" && !isExternalUser && <span className="text-red-500">*</span>}
+            {isExternalUser && <span className="text-gray-500 text-xs">(Optional)</span>}
           </label>
           <input
             type="password"
@@ -261,7 +288,7 @@ const UserForm = ({ user: editUser, mode, onUserSaved, onCancel }) => {
             value={formData.confirmPassword}
             onChange={handleChange}
             className={getFieldClassName('confirmPassword')}
-            placeholder="Confirm password"
+            placeholder={isExternalUser ? "Confirm password (optional)" : "Confirm password"}
           />
           {fieldErrors.confirmPassword && (
             <p className="text-red-500 text-xs mt-1">{fieldErrors.confirmPassword}</p>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "../contexts/AuthContext"
+import { farmResourcesAPI } from "../services/api"
 import { 
   Package, 
   Plus, 
@@ -32,10 +33,20 @@ const FarmResources = () => {
   // Role-based permissions
   const canManageResources = ["Admin", "Farm Manager"].includes(user?.role)
 
-  // Mock data for demonstration
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
+    fetchResources()
+  }, [])
+
+  const fetchResources = async () => {
+    try {
+      setLoading(true)
+      const response = await farmResourcesAPI.getResources()
+      setResources(response.data)
+      setError("")
+    } catch (error) {
+      console.error("Failed to fetch resources:", error)
+      setError("Failed to load resources. Please try again.")
+      // Fallback to mock data if API fails
       setResources([
         {
           id: 1,
@@ -45,7 +56,7 @@ const FarmResources = () => {
           unit: "bags",
           min_threshold: 20,
           max_capacity: 100,
-          cost_per_unit: 25.50,
+          cost_per_unit: 10200.00,
           supplier: "AgriSupply Co.",
           last_updated: "2024-01-15T10:30:00Z",
           expiry_date: "2024-03-15",
@@ -59,7 +70,7 @@ const FarmResources = () => {
           unit: "kg",
           min_threshold: 10,
           max_capacity: 50,
-          cost_per_unit: 12.00,
+          cost_per_unit: 4800.00,
           supplier: "SeedPro Ltd.",
           last_updated: "2024-01-10T14:20:00Z",
           expiry_date: "2024-06-30",
@@ -73,7 +84,7 @@ const FarmResources = () => {
           unit: "bags",
           min_threshold: 5,
           max_capacity: 30,
-          cost_per_unit: 35.00,
+          cost_per_unit: 14000.00,
           supplier: "FertMax Solutions",
           last_updated: "2024-01-08T09:15:00Z",
           expiry_date: "2024-12-31",
@@ -87,16 +98,17 @@ const FarmResources = () => {
           unit: "units",
           min_threshold: 15,
           max_capacity: 50,
-          cost_per_unit: 8.75,
+          cost_per_unit: 3500.00,
           supplier: "VetCare Supplies",
           last_updated: "2024-01-12T16:45:00Z",
           expiry_date: "2024-08-15",
           status: "in_stock"
         }
       ])
+    } finally {
       setLoading(false)
-    }, 1000)
-  }, [])
+    }
+  }
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -202,7 +214,7 @@ const FarmResources = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Value</p>
-              <p className="text-2xl font-bold text-gray-900">${totalValue.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-gray-900">₦{totalValue.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
             <Scale className="w-8 h-8 text-green-600" />
           </div>
@@ -277,7 +289,7 @@ const FarmResources = () => {
           <div className="flex items-end">
             <div className="text-sm text-gray-600">
               <p className="font-medium">Showing: {filteredResources.length} items</p>
-              <p>Value: ${filteredResources.reduce((sum, r) => sum + (r.current_stock * r.cost_per_unit), 0).toFixed(2)}</p>
+              <p>Value: ₦{filteredResources.reduce((sum, r) => sum + (r.current_stock * r.cost_per_unit), 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
           </div>
         </div>
@@ -330,12 +342,12 @@ const FarmResources = () => {
 
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">Unit Cost:</span>
-                      <span className="text-sm text-gray-700">${resource.cost_per_unit}</span>
+                      <span className="text-sm text-gray-700">₦{resource.cost_per_unit.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
 
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">Total Value:</span>
-                      <span className="font-semibold text-gray-900">${(resource.current_stock * resource.cost_per_unit).toFixed(2)}</span>
+                      <span className="font-semibold text-gray-900">₦{(resource.current_stock * resource.cost_per_unit).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
 
                     <div className="border-t pt-2">
@@ -443,7 +455,7 @@ const FarmResources = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Cost per Unit</label>
-                    <p className="mt-1 text-sm text-gray-900">${selectedResource.cost_per_unit}</p>
+                    <p className="mt-1 text-sm text-gray-900">₦{selectedResource.cost_per_unit.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Expiry Date</label>
@@ -451,7 +463,7 @@ const FarmResources = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Total Value</label>
-                    <p className="mt-1 text-sm text-gray-900">${(selectedResource.current_stock * selectedResource.cost_per_unit).toFixed(2)}</p>
+                    <p className="mt-1 text-sm text-gray-900">₦{(selectedResource.current_stock * selectedResource.cost_per_unit).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </div>
                 </div>
               </div>

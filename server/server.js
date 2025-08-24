@@ -1636,22 +1636,49 @@ app.post("/api/users", authenticateToken, async (req, res) => {
 
     const { full_name, email, phone, password, role } = req.body
 
-    if (!full_name || !email || !password) {
-      return res.status(400).json({ message: "Full name, email and password are required" })
+    // Define external user roles that don't need passwords or email verification
+    const externalRoles = ["Vendor", "Contractor", "Visitor", "Other"]
+    const isExternalUser = externalRoles.includes(role)
+
+    // Validation based on user type
+    if (!full_name) {
+      return res.status(400).json({ message: "Full name is required" })
+    }
+    
+    if (!isExternalUser) {
+      // Staff users need email and password
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required for staff users" })
+      }
     }
 
-    // Check if user exists
-    const existingUser = await pool.query("SELECT * FROM users WHERE email = $1", [email])
-    if (existingUser.rows.length > 0) {
-      return res.status(400).json({ message: "User already exists" })
+    // Check if user exists (only if email is provided)
+    if (email) {
+      const existingUser = await pool.query("SELECT * FROM users WHERE email = $1", [email])
+      if (existingUser.rows.length > 0) {
+        return res.status(400).json({ message: "User with this email already exists" })
+      }
     }
 
-    // Hash password
-    const password_hash = await bcrypt.hash(password, 10)
+    let password_hash = null
+    if (password) {
+      // Hash password if provided
+      password_hash = await bcrypt.hash(password, 10)
+    }
 
+    // Create user with optional email verification for external users
     const result = await pool.query(
-      "INSERT INTO users (full_name, email, phone, password_hash, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, full_name, email, role, phone",
-      [full_name, email, phone || null, password_hash, role || 'Staff'],
+      `INSERT INTO users (full_name, email, phone, password_hash, role, email_confirmed_at) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
+       RETURNING id, full_name, email, role, phone`,
+      [
+        full_name, 
+        email || null, 
+        phone || null, 
+        password_hash, 
+        role || 'Staff',
+        isExternalUser ? new Date() : null // Auto-verify external users
+      ]
     )
 
     res.status(201).json(result.rows[0])
@@ -1671,8 +1698,17 @@ app.put("/api/users/:id", authenticateToken, async (req, res) => {
     const userId = req.params.id
     const { full_name, email, phone, role, password } = req.body
 
-    if (!full_name || !email) {
-      return res.status(400).json({ message: "Full name and email are required" })
+    // Define external user roles that don't need passwords or email verification
+    const externalRoles = ["Vendor", "Contractor", "Visitor", "Other"]
+    const isExternalUser = externalRoles.includes(role)
+
+    // Validation based on user type
+    if (!full_name) {
+      return res.status(400).json({ message: "Full name is required" })
+    }
+    
+    if (!isExternalUser && !email) {
+      return res.status(400).json({ message: "Email is required for staff users" })
     }
 
     // Build update query dynamically based on provided fields
@@ -1683,8 +1719,10 @@ app.put("/api/users/:id", authenticateToken, async (req, res) => {
     updateFields.push(`full_name = $${paramIndex++}`)
     values.push(full_name)
 
-    updateFields.push(`email = $${paramIndex++}`)
-    values.push(email)
+    if (email) {
+      updateFields.push(`email = $${paramIndex++}`)
+      values.push(email)
+    }
 
     updateFields.push(`phone = $${paramIndex++}`)
     values.push(phone || null)
@@ -2356,6 +2394,297 @@ process.on('SIGINT', async () => {
     process.exit(1);
   }
 });
+
+// Planting Tracker API
+app.get("/api/plantings", authenticateToken, async (req, res) => {
+  try {
+    const result = await queryWithRetry(
+      `SELECT * FROM plantings ORDER BY planting_date DESC`
+    )
+    res.json(result.rows)
+  } catch (error) {
+    console.error("Get plantings error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+app.get("/api/plantings/:id", authenticateToken, async (req, res) => {
+  try {
+    const plantingId = req.params.id
+    const result = await queryWithRetry(
+      "SELECT * FROM plantings WHERE id = $1",
+      [plantingId]
+    )
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Planting not found" })
+    }
+    
+    res.json(result.rows[0])
+  } catch (error) {
+    console.error("Get planting error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+app.post("/api/plantings", authenticateToken, async (req, res) => {
+  try {
+    // Check permissions - only Admin and Farm Manager can create plantings
+    if (!["Admin", "Farm Manager"].includes(req.user.role)) {
+      return res.status(403).json({ message: "You do not have permission to create plantings" })
+    }
+
+    const { 
+      crop_name, 
+      variety, 
+      planting_date, 
+      expected_harvest_date, 
+      area_planted, 
+      location, 
+      growth_stage, 
+      notes 
+    } = req.body
+
+    if (!crop_name || !planting_date || !area_planted) {
+      return res.status(400).json({ message: "Crop name, planting date, and area planted are required" })
+    }
+
+    const result = await queryWithRetry(
+      `INSERT INTO plantings 
+       (crop_name, variety, planting_date, expected_harvest_date, area_planted, location, growth_stage, notes, status, created_at) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()) 
+       RETURNING *`,
+      [crop_name, variety, planting_date, expected_harvest_date, area_planted, location, growth_stage || 'planted', notes, 'active']
+    )
+
+    res.status(201).json(result.rows[0])
+  } catch (error) {
+    console.error("Create planting error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+app.put("/api/plantings/:id", authenticateToken, async (req, res) => {
+  try {
+    // Check permissions - only Admin and Farm Manager can update plantings
+    if (!["Admin", "Farm Manager"].includes(req.user.role)) {
+      return res.status(403).json({ message: "You do not have permission to update plantings" })
+    }
+
+    const plantingId = req.params.id
+    const { 
+      crop_name, 
+      variety, 
+      planting_date, 
+      expected_harvest_date, 
+      area_planted, 
+      location, 
+      growth_stage, 
+      notes,
+      status 
+    } = req.body
+
+    if (!crop_name || !planting_date || !area_planted) {
+      return res.status(400).json({ message: "Crop name, planting date, and area planted are required" })
+    }
+
+    const result = await queryWithRetry(
+      `UPDATE plantings 
+       SET crop_name = $1, variety = $2, planting_date = $3, expected_harvest_date = $4, 
+           area_planted = $5, location = $6, growth_stage = $7, notes = $8, status = $9, updated_at = NOW()
+       WHERE id = $10 
+       RETURNING *`,
+      [crop_name, variety, planting_date, expected_harvest_date, area_planted, location, growth_stage, notes, status || 'active', plantingId]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Planting not found" })
+    }
+
+    res.json(result.rows[0])
+  } catch (error) {
+    console.error("Update planting error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+app.delete("/api/plantings/:id", authenticateToken, async (req, res) => {
+  try {
+    // Check permissions - only Admin and Farm Manager can delete plantings
+    if (!["Admin", "Farm Manager"].includes(req.user.role)) {
+      return res.status(403).json({ message: "You do not have permission to delete plantings" })
+    }
+
+    const plantingId = req.params.id
+    const result = await queryWithRetry(
+      "DELETE FROM plantings WHERE id = $1 RETURNING id",
+      [plantingId]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Planting not found" })
+    }
+
+    res.json({ message: "Planting deleted successfully" })
+  } catch (error) {
+    console.error("Delete planting error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Farm Resources API
+app.get("/api/farm-resources", authenticateToken, async (req, res) => {
+  try {
+    const result = await queryWithRetry(
+      `SELECT * FROM farm_resources ORDER BY created_at DESC`
+    )
+    res.json(result.rows)
+  } catch (error) {
+    console.error("Get farm resources error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+app.get("/api/farm-resources/:id", authenticateToken, async (req, res) => {
+  try {
+    const resourceId = req.params.id
+    const result = await queryWithRetry(
+      "SELECT * FROM farm_resources WHERE id = $1",
+      [resourceId]
+    )
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Resource not found" })
+    }
+    
+    res.json(result.rows[0])
+  } catch (error) {
+    console.error("Get farm resource error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+app.post("/api/farm-resources", authenticateToken, async (req, res) => {
+  try {
+    // Check permissions - only Admin and Farm Manager can create resources
+    if (!["Admin", "Farm Manager"].includes(req.user.role)) {
+      return res.status(403).json({ message: "You do not have permission to create resources" })
+    }
+
+    const { 
+      name, 
+      category, 
+      current_stock, 
+      unit, 
+      min_threshold, 
+      max_capacity, 
+      cost_per_unit, 
+      supplier, 
+      expiry_date 
+    } = req.body
+
+    if (!name || !category || current_stock === undefined || !unit) {
+      return res.status(400).json({ message: "Name, category, current stock, and unit are required" })
+    }
+
+    // Determine status based on stock levels
+    let status = "in_stock"
+    if (current_stock <= 0) {
+      status = "out_of_stock"
+    } else if (min_threshold && current_stock <= min_threshold) {
+      status = "low_stock"
+    }
+
+    const result = await queryWithRetry(
+      `INSERT INTO farm_resources 
+       (name, category, current_stock, unit, min_threshold, max_capacity, cost_per_unit, supplier, expiry_date, status, created_at, last_updated) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW()) 
+       RETURNING *`,
+      [name, category, current_stock, unit, min_threshold || 0, max_capacity || 0, cost_per_unit || 0, supplier, expiry_date, status]
+    )
+
+    res.status(201).json(result.rows[0])
+  } catch (error) {
+    console.error("Create farm resource error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+app.put("/api/farm-resources/:id", authenticateToken, async (req, res) => {
+  try {
+    // Check permissions - only Admin and Farm Manager can update resources
+    if (!["Admin", "Farm Manager"].includes(req.user.role)) {
+      return res.status(403).json({ message: "You do not have permission to update resources" })
+    }
+
+    const resourceId = req.params.id
+    const { 
+      name, 
+      category, 
+      current_stock, 
+      unit, 
+      min_threshold, 
+      max_capacity, 
+      cost_per_unit, 
+      supplier, 
+      expiry_date 
+    } = req.body
+
+    if (!name || !category || current_stock === undefined || !unit) {
+      return res.status(400).json({ message: "Name, category, current stock, and unit are required" })
+    }
+
+    // Determine status based on stock levels
+    let status = "in_stock"
+    if (current_stock <= 0) {
+      status = "out_of_stock"
+    } else if (min_threshold && current_stock <= min_threshold) {
+      status = "low_stock"
+    }
+
+    const result = await queryWithRetry(
+      `UPDATE farm_resources 
+       SET name = $1, category = $2, current_stock = $3, unit = $4, min_threshold = $5, 
+           max_capacity = $6, cost_per_unit = $7, supplier = $8, expiry_date = $9, status = $10, last_updated = NOW()
+       WHERE id = $11 
+       RETURNING *`,
+      [name, category, current_stock, unit, min_threshold || 0, max_capacity || 0, cost_per_unit || 0, supplier, expiry_date, status, resourceId]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Resource not found" })
+    }
+
+    res.json(result.rows[0])
+  } catch (error) {
+    console.error("Update farm resource error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+app.delete("/api/farm-resources/:id", authenticateToken, async (req, res) => {
+  try {
+    // Check permissions - only Admin and Farm Manager can delete resources
+    if (!["Admin", "Farm Manager"].includes(req.user.role)) {
+      return res.status(403).json({ message: "You do not have permission to delete resources" })
+    }
+
+    const resourceId = req.params.id
+    const result = await queryWithRetry(
+      "DELETE FROM farm_resources WHERE id = $1 RETURNING id",
+      [resourceId]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Resource not found" })
+    }
+
+    res.json({ message: "Resource deleted successfully" })
+  } catch (error) {
+    console.error("Delete farm resource error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
 
 // Start server
 app.listen(port, () => {
