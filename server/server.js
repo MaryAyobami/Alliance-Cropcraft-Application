@@ -750,6 +750,11 @@ cron.schedule("0 0 * * *", async () => {
 // --- Create Task API: Add tag, recurrent, active_date ---
 app.post("/api/tasks", authenticateToken, async (req, res) => {
   try {
+    // Check if user has permission to create tasks
+    if (!checkTaskAccess(req.user.role, 'create')) {
+      return res.status(403).json({ message: 'You do not have permission to create tasks' })
+    }
+
     const {
       title,
       description,
@@ -1158,6 +1163,102 @@ app.put("/api/tasks/:id/complete", authenticateToken, async (req, res) => {
   }
 })
 
+// Update task (Admin and Farm Manager only)
+app.put("/api/tasks/:id", authenticateToken, async (req, res) => {
+  try {
+    if (!checkTaskAccess(req.user.role, 'update')) {
+      return res.status(403).json({ message: 'You do not have permission to update tasks' })
+    }
+
+    const taskId = req.params.id
+    const { title, description, due_date, due_time, assigned_to, priority, tag, recurrent, active_date } = req.body
+
+    // Enhanced validation
+    if (!title || !title.trim()) {
+      return res.status(400).json({ 
+        message: "Task title is required",
+        field: "title"
+      })
+    }
+
+    if (title.length > 100) {
+      return res.status(400).json({ 
+        message: "Task title must be less than 100 characters",
+        field: "title"
+      })
+    }
+
+    if (!due_date) {
+      return res.status(400).json({ 
+        message: "Due date is required",
+        field: "due_date"
+      })
+    }
+
+    if (!assigned_to) {
+      return res.status(400).json({ 
+        message: "Please assign the task to someone",
+        field: "assigned_to"
+      })
+    }
+
+    // Verify assigned user exists
+    const userCheck = await queryWithRetry("SELECT id FROM users WHERE id = $1", [assigned_to])
+    if (userCheck.rows.length === 0) {
+      return res.status(400).json({ 
+        message: "Assigned user does not exist",
+        field: "assigned_to"
+      })
+    }
+
+    const result = await pool.query(
+      `UPDATE tasks SET 
+        title = $1, 
+        description = $2, 
+        due_date = $3, 
+        due_time = $4, 
+        assigned_to = $5, 
+        priority = $6, 
+        tag = $7, 
+        recurrent = $8, 
+        active_date = $9,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $10 RETURNING *`,
+      [title, description, due_date, due_time, assigned_to, priority || 'medium', tag || 'static', recurrent !== false, active_date, taskId]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Task not found" })
+    }
+
+    res.json(result.rows[0])
+  } catch (error) {
+    console.error("Update task error:", error)
+    res.status(500).json({ message: "Failed to update task" })
+  }
+})
+
+// Delete task (Admin and Farm Manager only)
+app.delete("/api/tasks/:id", authenticateToken, async (req, res) => {
+  try {
+    if (!checkTaskAccess(req.user.role, 'delete')) {
+      return res.status(403).json({ message: 'You do not have permission to delete tasks' })
+    }
+
+    const taskId = req.params.id
+    const result = await pool.query("DELETE FROM tasks WHERE id = $1 RETURNING *", [taskId])
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Task not found" })
+    }
+
+    res.json({ message: "Task deleted successfully" })
+  } catch (error) {
+    console.error("Delete task error:", error)
+    res.status(500).json({ message: "Failed to delete task" })
+  }
+})
+
 // Events routes
 app.get("/api/events", authenticateToken, async (req, res) => {
   try {
@@ -1377,10 +1478,34 @@ app.get("/api/reports/stats", authenticateToken, requireAdmin, async (req, res) 
     const { total_tasks, completed_tasks } = completionResult.rows[0]
     const completionRate = total_tasks > 0 ? ((completed_tasks / total_tasks) * 100).toFixed(1) : 0
 
-    // Mock metrics - replace with real sources as needed
-    const activeLivestock = 373
-    const staffEfficiency = 91.2
-    const monthlyRevenue = 22.8
+    // Get real livestock count (excluding deceased)
+    const livestockResult = await pool.query(
+      "SELECT COUNT(*) as count FROM livestock WHERE health_status != 'deceased'"
+    )
+    const activeLivestock = Number.parseInt(livestockResult.rows[0].count)
+
+    // Calculate staff efficiency based on task completion rates
+    const staffEfficiencyResult = await pool.query(
+      `SELECT 
+        ROUND(AVG(CASE WHEN status = 'completed' THEN 100 ELSE 0 END), 1) as efficiency
+      FROM tasks 
+      WHERE assigned_to IS NOT NULL ${where.replace('created_at', 'due_date')}`,
+      params
+    )
+    const staffEfficiency = Number.parseFloat(staffEfficiencyResult.rows[0].efficiency) || 0
+
+    // Calculate productivity score as monthly revenue placeholder
+    // This could be replaced with actual revenue data if available
+    const productivityResult = await pool.query(
+      `SELECT 
+        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed,
+        COUNT(*) as total
+      FROM tasks 
+      WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'`
+    )
+    const { completed: monthlyCompleted, total: monthlyTotal } = productivityResult.rows[0]
+    const monthlyRevenue = monthlyTotal > 0 ? 
+      Number.parseFloat(((monthlyCompleted / monthlyTotal) * 50).toFixed(1)) : 0 // Scaled to represent productivity
 
     res.json({
       taskCompletionRate: Number.parseFloat(completionRate),
@@ -1504,6 +1629,11 @@ app.put("/api/users/profile", authenticateToken, async (req, res) => {
 
 app.post("/api/users", authenticateToken, async (req, res) => {
   try {
+    // Check permissions - only Admin and Farm Manager can create users
+    if (!["Admin", "Farm Manager"].includes(req.user.role)) {
+      return res.status(403).json({ message: "You do not have permission to create users" })
+    }
+
     const { full_name, email, phone, password, role } = req.body
 
     if (!full_name || !email || !password) {
@@ -1533,17 +1663,47 @@ app.post("/api/users", authenticateToken, async (req, res) => {
 
 app.put("/api/users/:id", authenticateToken, async (req, res) => {
   try {
+    // Check permissions - only Admin and Farm Manager can update users
+    if (!["Admin", "Farm Manager"].includes(req.user.role)) {
+      return res.status(403).json({ message: "You do not have permission to update users" })
+    }
+
     const userId = req.params.id
-    const { full_name, email, phone, role } = req.body
+    const { full_name, email, phone, role, password } = req.body
 
     if (!full_name || !email) {
       return res.status(400).json({ message: "Full name and email are required" })
     }
 
-    const result = await pool.query(
-      "UPDATE users SET full_name = $1, email = $2, phone = $3, role = $4 WHERE id = $5 RETURNING id, full_name, email, role, phone",
-      [full_name, email, phone || null, role, userId],
-    )
+    // Build update query dynamically based on provided fields
+    let updateFields = []
+    let values = []
+    let paramIndex = 1
+
+    updateFields.push(`full_name = $${paramIndex++}`)
+    values.push(full_name)
+
+    updateFields.push(`email = $${paramIndex++}`)
+    values.push(email)
+
+    updateFields.push(`phone = $${paramIndex++}`)
+    values.push(phone || null)
+
+    if (role) {
+      updateFields.push(`role = $${paramIndex++}`)
+      values.push(role)
+    }
+
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10)
+      updateFields.push(`password = $${paramIndex++}`)
+      values.push(hashedPassword)
+    }
+
+    values.push(userId) // for WHERE clause
+    
+    const query = `UPDATE users SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING id, full_name, email, role, phone, created_at`
+    const result = await pool.query(query, values)
 
     if (result.rows.length === 0) {
       return res.status(404).json({ message: "User not found" })
@@ -1650,6 +1810,22 @@ const checkLivestockAccess = (userRole, operation) => {
     'Admin': ['view', 'create', 'update', 'delete'],
     'Farm Manager': ['view', 'create', 'update', 'delete'],
     'Veterinary Doctor': ['view', 'update'],
+    'Pasture Manager': ['view'],
+    'Staff': ['view'],
+    'Farm Attendant': ['view'],
+    'Maintenance Officer': ['view'],
+    'Field Production Officer': ['view']
+  }
+  
+  return permissions[userRole]?.includes(operation) || false
+}
+
+// Role-based access helper for tasks
+const checkTaskAccess = (userRole, operation) => {
+  const permissions = {
+    'Admin': ['view', 'create', 'update', 'delete'],
+    'Farm Manager': ['view', 'create', 'update', 'delete'],
+    'Veterinary Doctor': ['view'],
     'Pasture Manager': ['view'],
     'Staff': ['view'],
     'Farm Attendant': ['view'],

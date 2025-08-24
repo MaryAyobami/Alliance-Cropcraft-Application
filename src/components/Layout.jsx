@@ -12,6 +12,12 @@ import {
   LogOut,
   Bell,
   Activity,
+  Heart,
+  Package,
+  Map,
+  Sprout,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react"
 import { useState } from "react"
 
@@ -20,6 +26,72 @@ const Layout = ({ children }) => {
   const { user, logout } = useAuth()
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [expandedMenus, setExpandedMenus] = useState({})
+  
+  const toggleSubmenu = (menuName) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [menuName]: !prev[menuName]
+    }))
+  }
+
+  const renderNavigationItem = (item) => {
+    const Icon = item.icon
+    
+    if (item.submenu) {
+      const isExpanded = expandedMenus[item.name]
+      return (
+        <div key={item.name}>
+          <button
+            onClick={() => toggleSubmenu(item.name)}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-colors text-gray-700 hover:bg-gray-100"
+          >
+            <div className="flex items-center gap-3">
+              <Icon className="w-5 h-5" />
+              <span>{item.name}</span>
+            </div>
+            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          </button>
+          {isExpanded && (
+            <div className="ml-6 mt-1 space-y-1">
+              {item.submenu.map((subItem) => {
+                const SubIcon = subItem.icon
+                const isActive = location.pathname === subItem.href
+                return (
+                  <Link
+                    key={subItem.name}
+                    to={subItem.href}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
+                      isActive ? "bg-primary-600 text-white" : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <SubIcon className="w-4 h-4" />
+                    <span>{subItem.name}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    const isActive = location.pathname === item.href
+    return (
+      <Link
+        key={item.name}
+        to={item.href}
+        className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
+          isActive ? "bg-primary-600 text-white" : "text-gray-700 hover:bg-gray-100"
+        }`}
+        onClick={() => setMenuOpen(false)}
+      >
+        <Icon className="w-5 h-5" />
+        <span>{item.name}</span>
+      </Link>
+    )
+  }
 
   const handleLogout = () => {
     logout(); // The AuthContext now handles confirmation and navigation
@@ -29,8 +101,19 @@ const Layout = ({ children }) => {
 		{ name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
 		{ name: "Tasks", href: "/tasks", icon: CheckSquare },
 		{ name: "Calendar", href: "/calendar", icon: Calendar },
-		{ name: "Livestock", href: "/livestock", icon: Activity },
-		...(user?.role === "Admin" ? [{ name: "Reports", href: "/reports", icon: BarChart3 }] : []),
+		{ 
+			name: "Livestock", 
+			icon: Activity,
+			submenu: [
+				{ name: "Overview", href: "/livestock", icon: Activity },
+				{ name: "Health", href: "/livestock/health", icon: Heart },
+			]
+		},
+		{ name: "Farm Resources", href: "/farm-resources", icon: Package },
+		{ name: "Farm Map", href: "/farm-map", icon: Map },
+		{ name: "Planting Tracker", href: "/planting-tracker", icon: Sprout },
+		{ name: "Users", href: "/users", icon: Users },
+		...(user?.role === "Admin" || user?.role === "Farm Manager" ? [{ name: "Reports", href: "/reports", icon: BarChart3 }] : []),
 	];
 
   return (
@@ -99,21 +182,7 @@ const Layout = ({ children }) => {
           <span className="font-bold text-lg text-gray-900">Alliance CropCraft</span>
         </div>
         <nav className="flex-1 p-4 space-y-2">
-          {navigation.map((item) => {
-            const Icon = item.icon
-            const isActive = location.pathname === item.href
-            return (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${isActive ? "bg-primary-600 text-white" : "text-gray-700 hover:bg-gray-100"}`}
-                onClick={() => setMenuOpen(false)}
-              >
-                <Icon className="w-5 h-5" />
-                <span>{item.name}</span>
-              </Link>
-            )
-          })}
+          {navigation.map(renderNavigationItem)}
         </nav>
         <div className="p-4 border-t border-gray-200 flex items-center gap-2">
           <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center">
@@ -140,20 +209,7 @@ const Layout = ({ children }) => {
             <span className="font-bold text-lg text-gray-900">Alliance CropCraft</span>
           </div>
           <nav className="flex-1 p-4 space-y-2">
-            {navigation.map((item) => {
-              const Icon = item.icon
-              const isActive = location.pathname === item.href
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${isActive ? "bg-primary-600 text-white" : "text-gray-700 hover:bg-gray-100"}`}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span>{item.name}</span>
-                </Link>
-              )
-            })}
+            {navigation.map(renderNavigationItem)}
           </nav>
           <div className="p-4 border-t border-gray-200 flex items-center gap-2">
             <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center">

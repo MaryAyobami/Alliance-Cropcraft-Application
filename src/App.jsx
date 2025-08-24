@@ -14,6 +14,11 @@ import TaskDetails from "./pages/TaskDetails"
 import Calendar from "./pages/Calendar"
 import Reports from "./pages/Reports"
 import Livestock from "./pages/Livestock"
+import LivestockHealth from "./pages/LivestockHealth"
+import Users from "./pages/Users"
+import FarmResources from "./pages/FarmResources"
+import FarmMap from "./pages/FarmMap"
+import PlantingTracker from "./pages/PlantingTracker"
 import PWAInstallPrompt from "./components/PWAInstallPrompt"
 import Settings from "./pages/Settings"
 
@@ -184,11 +189,51 @@ function App() {
             }
           />
           <Route
-            path="/profile"
+            path="/users"
             element={
               <ProtectedRoute>
                 <Layout>
-                  <Settings/>
+                  <Users />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/livestock/health"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <LivestockHealth />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/farm-resources"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <FarmResources />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/farm-map"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <FarmMap />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/planting-tracker"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <PlantingTracker />
                 </Layout>
               </ProtectedRoute>
             }

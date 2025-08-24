@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef} from "react"
 import { tasksAPI } from "../services/api"
-import { CheckCircle, Clock, Filter, Upload, Camera, X, Eye, FileText, Calendar, User } from "lucide-react"
+import { CheckCircle, Clock, Filter, Upload, Camera, X, Eye, FileText, Calendar, User, Edit, Trash2, Plus } from "lucide-react"
 import { useAuth } from "../contexts/AuthContext"
 import CreateTaskForm from "../components/CreateTaskForm"
+import EditTaskForm from "../components/EditTaskForm"
 import { format } from "date-fns"
 
 
@@ -27,7 +28,14 @@ const Tasks = () => {
   const [cameraStream, setCameraStream] = useState(null)
   const [showAllTasks, setShowAllTasks] = useState(false)
   const [showAllWeeklyTasks, setShowAllWeeklyTasks] = useState(false)
+  const [editingTask, setEditingTask] = useState(null)
+  const [showEditTaskForm, setShowEditTaskForm] = useState(false)
   const videoRef = useRef(null)
+
+  // Role-based permissions
+  const canCreate = ["Admin", "Farm Manager"].includes(user?.role)
+  const canUpdate = ["Admin", "Farm Manager"].includes(user?.role)
+  const canDelete = ["Admin", "Farm Manager"].includes(user?.role)
 
   useEffect(() => {
     fetchTasks()
@@ -217,6 +225,34 @@ const Tasks = () => {
     setSelectedTask(null)
   }
 
+  const handleEditTask = (task) => {
+    setEditingTask(task)
+    setShowEditTaskForm(true)
+  }
+
+  const handleTaskUpdated = () => {
+    setShowEditTaskForm(false)
+    setEditingTask(null)
+    fetchTasks() // Refetch tasks to get updated data
+  }
+
+  const handleDeleteTask = async (taskId) => {
+    if (window.confirm('Are you sure you want to delete this task?')) {
+      try {
+        await tasksAPI.deleteTask(taskId)
+        fetchTasks() // Refetch tasks to reflect deletion
+      } catch (error) {
+        console.error("Error deleting task:", error)
+        alert("Failed to delete task. Please try again.")
+      }
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setShowEditTaskForm(false)
+    setEditingTask(null)
+  }
+
   const getPriorityColor = (priority) => {
     switch (priority) {
       case "high":
@@ -284,7 +320,7 @@ const Tasks = () => {
               <option value="completed">Completed</option>
             </select>
           </div>
-          {user && user.role === "Admin" && (
+          {canCreate && (
             <button
               className="btn-primary text-sm"
               onClick={() => setShowCreateTaskForm(true)}
@@ -361,16 +397,26 @@ const Tasks = () => {
                   <div className="text-sm text-green-600 font-medium">
                     ✅ Completed {task.completed_at ? new Date(task.completed_at).toLocaleString() : 'Recently'}
                   </div>
-                  <button
-                    onClick={() => handleCompletedTaskClick(task)}
-                    className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center space-x-1 transition-colors"
-                  >
-                    <Eye className="w-4 h-4" />
-                    <span>View Details</span>
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleCompletedTaskClick(task)}
+                      className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center space-x-1 transition-colors"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span>View Details</span>
+                    </button>
+                    {canDelete && (
+                      <button
+                        onClick={() => handleDeleteTask(task.id)}
+                        className="text-red-600 hover:text-red-700 text-sm font-medium flex items-center space-x-1 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ) : (
-                <div className="flex justify-center">
+                <div className="flex flex-col space-y-2">
                   <button
                     onClick={() => handleMarkCompleteClick(task)}
                     className="btn-primary text-sm flex items-center space-x-2 w-full justify-center"
@@ -378,6 +424,28 @@ const Tasks = () => {
                     <CheckCircle className="w-4 h-4" />
                     <span>Mark Complete</span>
                   </button>
+                  {(canUpdate || canDelete) && (
+                    <div className="flex justify-center space-x-2">
+                      {canUpdate && (
+                        <button
+                          onClick={() => handleEditTask(task)}
+                          className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center space-x-1 transition-colors"
+                        >
+                          <Edit className="w-4 h-4" />
+                          <span>Edit</span>
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          onClick={() => handleDeleteTask(task.id)}
+                          className="text-red-600 hover:text-red-700 text-sm font-medium flex items-center space-x-1 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          <span>Delete</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -635,8 +703,8 @@ const Tasks = () => {
 
       {/* Create Task Form Modal */}
       {showCreateTaskForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl relative">
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+          <div className="bg-white p-6 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl relative">
             <button
               onClick={() => setShowCreateTaskForm(false)}
               className="absolute top-4 right-4 text-gray-500 hover:text-black transition-colors"
@@ -644,6 +712,25 @@ const Tasks = () => {
               <X className="w-6 h-6" />
             </button>
             <CreateTaskForm />
+          </div>
+        </div>
+      )}
+
+      {/* Edit Task Form Modal */}
+      {showEditTaskForm && editingTask && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+          <div className="bg-white p-6 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl relative">
+            <button
+              onClick={handleCancelEdit}
+              className="absolute top-4 right-4 text-gray-500 hover:text-black transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <EditTaskForm 
+              task={editingTask}
+              onTaskUpdated={handleTaskUpdated}
+              onCancel={handleCancelEdit}
+            />
           </div>
         </div>
       )}

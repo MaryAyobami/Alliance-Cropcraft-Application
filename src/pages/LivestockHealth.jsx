@@ -1,0 +1,512 @@
+import { useState, useEffect } from "react"
+import { useAuth } from "../contexts/AuthContext"
+import { livestockAPI } from "../services/api"
+import { 
+  Heart, 
+  Plus, 
+  Edit, 
+  Search, 
+  Filter, 
+  Activity,
+  AlertTriangle,
+  CheckCircle,
+  Calendar,
+  Syringe,
+  Baby,
+  Utensils,
+  FileText,
+  Eye,
+  X
+} from "lucide-react"
+
+const LivestockHealth = () => {
+  const { user } = useAuth()
+  const [livestock, setLivestock] = useState([])
+  const [healthRecords, setHealthRecords] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filterStatus, setFilterStatus] = useState("")
+  const [filterType, setFilterType] = useState("all") // all, health, vaccination, breeding, feeding
+  const [showModal, setShowModal] = useState(false)
+  const [modalMode, setModalMode] = useState("create") // create, edit, view
+  const [selectedRecord, setSelectedRecord] = useState(null)
+  const [selectedAnimal, setSelectedAnimal] = useState("")
+
+  useEffect(() => {
+    fetchLivestock()
+  }, [])
+
+  const fetchLivestock = async () => {
+    try {
+      setLoading(true)
+      const response = await livestockAPI.getLivestock()
+      setLivestock(response.data)
+      generateHealthRecords(response.data)
+      setError("")
+    } catch (error) {
+      console.error("Failed to fetch livestock:", error)
+      setError("Failed to load livestock data. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Generate sample health records - in a real app, this would come from a health records API
+  const generateHealthRecords = (livestockData) => {
+    const records = []
+    const recordTypes = ['health_check', 'vaccination', 'breeding', 'feeding', 'treatment']
+    
+    livestockData.forEach(animal => {
+      // Generate 2-5 records per animal
+      const recordCount = Math.floor(Math.random() * 4) + 2
+      for (let i = 0; i < recordCount; i++) {
+        const type = recordTypes[Math.floor(Math.random() * recordTypes.length)]
+        const daysAgo = Math.floor(Math.random() * 90)
+        const date = new Date()
+        date.setDate(date.getDate() - daysAgo)
+
+        records.push({
+          id: `${animal.id}_${i}`,
+          animal_id: animal.id,
+          animal_name: animal.name,
+          animal_species: animal.species,
+          type,
+          date: date.toISOString().split('T')[0],
+          description: getRecordDescription(type, animal),
+          notes: getRecordNotes(type),
+          veterinarian: type === 'vaccination' || type === 'treatment' ? 'Dr. Johnson' : null,
+          next_due: getNextDueDate(type, date)
+        })
+      }
+    })
+
+    records.sort((a, b) => new Date(b.date) - new Date(a.date))
+    setHealthRecords(records)
+  }
+
+  const getRecordDescription = (type, animal) => {
+    const descriptions = {
+      health_check: `General health examination for ${animal.name}`,
+      vaccination: `Vaccination administered to ${animal.name}`,
+      breeding: `Breeding activity recorded for ${animal.name}`,
+      feeding: `Feeding schedule updated for ${animal.name}`,
+      treatment: `Medical treatment provided to ${animal.name}`
+    }
+    return descriptions[type] || 'Health record'
+  }
+
+  const getRecordNotes = (type) => {
+    const notes = {
+      health_check: 'Animal appears healthy, no concerns noted',
+      vaccination: 'Vaccine administered, no adverse reactions observed',
+      breeding: 'Breeding attempt successful, monitoring required',
+      feeding: 'Adjusted feed portion, monitor weight gain',
+      treatment: 'Treatment completed, follow-up required'
+    }
+    return notes[type] || 'No additional notes'
+  }
+
+  const getNextDueDate = (type, lastDate) => {
+    if (type === 'vaccination') {
+      const nextDate = new Date(lastDate)
+      nextDate.setMonth(nextDate.getMonth() + 6) // 6 months for next vaccination
+      return nextDate.toISOString().split('T')[0]
+    } else if (type === 'health_check') {
+      const nextDate = new Date(lastDate)
+      nextDate.setMonth(nextDate.getMonth() + 3) // 3 months for next health check
+      return nextDate.toISOString().split('T')[0]
+    }
+    return null
+  }
+
+  const getHealthStatusColor = (status) => {
+    switch (status) {
+      case "healthy":
+        return "bg-green-100 text-green-700 border-green-200"
+      case "sick":
+        return "bg-red-100 text-red-700 border-red-200"
+      case "under_treatment":
+        return "bg-yellow-100 text-yellow-700 border-yellow-200"
+      case "quarantine":
+        return "bg-orange-100 text-orange-700 border-orange-200"
+      default:
+        return "bg-gray-100 text-gray-700 border-gray-200"
+    }
+  }
+
+  const getRecordTypeIcon = (type) => {
+    switch (type) {
+      case 'health_check':
+        return <Heart className="w-4 h-4" />
+      case 'vaccination':
+        return <Syringe className="w-4 h-4" />
+      case 'breeding':
+        return <Baby className="w-4 h-4" />
+      case 'feeding':
+        return <Utensils className="w-4 h-4" />
+      case 'treatment':
+        return <Activity className="w-4 h-4" />
+      default:
+        return <FileText className="w-4 h-4" />
+    }
+  }
+
+  const getRecordTypeColor = (type) => {
+    switch (type) {
+      case 'health_check':
+        return "bg-blue-100 text-blue-700"
+      case 'vaccination':
+        return "bg-purple-100 text-purple-700"
+      case 'breeding':
+        return "bg-pink-100 text-pink-700"
+      case 'feeding':
+        return "bg-green-100 text-green-700"
+      case 'treatment':
+        return "bg-red-100 text-red-700"
+      default:
+        return "bg-gray-100 text-gray-700"
+    }
+  }
+
+  const filteredRecords = healthRecords.filter(record => {
+    const matchesSearch = record.animal_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         record.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const animal = livestock.find(a => a.id === record.animal_id)
+    const matchesStatus = !filterStatus || animal?.health_status === filterStatus
+    const matchesType = filterType === "all" || record.type === filterType
+
+    return matchesSearch && matchesStatus && matchesType
+  })
+
+  const handleCreate = () => {
+    setModalMode("create")
+    setSelectedRecord(null)
+    setShowModal(true)
+  }
+
+  const handleEdit = (record) => {
+    setModalMode("edit")
+    setSelectedRecord(record)
+    setShowModal(true)
+  }
+
+  const handleView = (record) => {
+    setModalMode("view")
+    setSelectedRecord(record)
+    setShowModal(true)
+  }
+
+  const getUpcomingDueDates = () => {
+    const today = new Date()
+    const nextWeek = new Date()
+    nextWeek.setDate(today.getDate() + 7)
+
+    return healthRecords.filter(record => {
+      if (!record.next_due) return false
+      const dueDate = new Date(record.next_due)
+      return dueDate >= today && dueDate <= nextWeek
+    }).slice(0, 5)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Livestock Health Management</h1>
+          <p className="text-gray-600 mt-2">Track health, vaccinations, breeding, and feeding records</p>
+        </div>
+        <button
+          onClick={handleCreate}
+          className="mt-4 sm:mt-0 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-xl flex items-center space-x-2 transition-colors"
+        >
+          <Plus className="w-5 h-5" />
+          <span>Add Health Record</span>
+        </button>
+      </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
+          {error}
+        </div>
+      )}
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="bg-green-100 p-3 rounded-lg">
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Healthy Animals</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {livestock.filter(a => a.health_status === 'healthy').length}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="bg-red-100 p-3 rounded-lg">
+              <AlertTriangle className="w-6 h-6 text-red-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Need Attention</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {livestock.filter(a => a.health_status === 'sick' || a.health_status === 'under_treatment').length}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="bg-purple-100 p-3 rounded-lg">
+              <Syringe className="w-6 h-6 text-purple-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Due Vaccinations</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {getUpcomingDueDates().filter(r => r.type === 'vaccination').length}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="bg-blue-100 p-3 rounded-lg">
+              <Heart className="w-6 h-6 text-blue-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total Records</p>
+              <p className="text-2xl font-bold text-gray-900">{healthRecords.length}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Upcoming Due Dates */}
+      {getUpcomingDueDates().length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+          <h3 className="text-lg font-semibold text-yellow-800 mb-3">Upcoming Due Dates</h3>
+          <div className="space-y-2">
+            {getUpcomingDueDates().map(record => (
+              <div key={record.id} className="flex items-center justify-between bg-white p-3 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className={`p-2 rounded-lg ${getRecordTypeColor(record.type)}`}>
+                    {getRecordTypeIcon(record.type)}
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{record.animal_name}</p>
+                    <p className="text-sm text-gray-600">{record.type.replace('_', ' ').toUpperCase()}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-gray-900">Due: {new Date(record.next_due).toLocaleDateString()}</p>
+                  <p className="text-xs text-gray-500">
+                    {Math.ceil((new Date(record.next_due) - new Date()) / (1000 * 60 * 60 * 24))} days
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Search and Filters */}
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Search Records</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search by animal or description..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Health Status</label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="w-full border border-gray-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="">All Status</option>
+              <option value="healthy">Healthy</option>
+              <option value="sick">Sick</option>
+              <option value="under_treatment">Under Treatment</option>
+              <option value="quarantine">Quarantine</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Record Type</label>
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="w-full border border-gray-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="all">All Types</option>
+              <option value="health_check">Health Check</option>
+              <option value="vaccination">Vaccination</option>
+              <option value="breeding">Breeding</option>
+              <option value="feeding">Feeding</option>
+              <option value="treatment">Treatment</option>
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            <div className="text-sm text-gray-600">
+              <p className="font-medium">Total: {filteredRecords.length} records</p>
+              <p>Animals: {livestock.length}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Health Records */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">Health Records</h2>
+          <p className="text-gray-600 mt-1">Recent health activities and records</p>
+        </div>
+
+        <div className="p-6">
+          {filteredRecords.length === 0 ? (
+            <div className="text-center py-8">
+              <Heart className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No health records found</h3>
+              <p className="text-gray-600">No health records match your search criteria.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredRecords.map((record) => {
+                const animal = livestock.find(a => a.id === record.animal_id)
+                return (
+                  <div key={record.id} className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start space-x-4">
+                        <div className={`p-3 rounded-lg ${getRecordTypeColor(record.type)}`}>
+                          {getRecordTypeIcon(record.type)}
+                        </div>
+                        
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3 mb-2">
+                            <h3 className="font-semibold text-gray-900">{record.animal_name}</h3>
+                            <span className="text-sm text-gray-500">({record.animal_species})</span>
+                            {animal && (
+                              <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full border ${getHealthStatusColor(animal.health_status)}`}>
+                                {animal.health_status?.replace('_', ' ')}
+                              </span>
+                            )}
+                          </div>
+                          
+                          <p className="text-gray-900 mb-2">{record.description}</p>
+                          <p className="text-sm text-gray-600 mb-3">{record.notes}</p>
+                          
+                          <div className="flex items-center space-x-4 text-sm text-gray-500">
+                            <div className="flex items-center space-x-1">
+                              <Calendar className="w-4 h-4" />
+                              <span>{new Date(record.date).toLocaleDateString()}</span>
+                            </div>
+                            {record.veterinarian && (
+                              <div className="flex items-center space-x-1">
+                                <Activity className="w-4 h-4" />
+                                <span>{record.veterinarian}</span>
+                              </div>
+                            )}
+                            {record.next_due && (
+                              <div className="flex items-center space-x-1">
+                                <AlertTriangle className="w-4 h-4" />
+                                <span>Next due: {new Date(record.next_due).toLocaleDateString()}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleView(record)}
+                          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1"
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span>View</span>
+                        </button>
+                        
+                        <button
+                          onClick={() => handleEdit(record)}
+                          className="bg-primary-100 hover:bg-primary-200 text-primary-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1"
+                        >
+                          <Edit className="w-4 h-4" />
+                          <span>Edit</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Health Record Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">
+                {modalMode === "create" ? "Add Health Record" : 
+                 modalMode === "edit" ? "Edit Health Record" : "Health Record Details"}
+              </h3>
+              <button 
+                onClick={() => setShowModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="text-center py-8">
+              <Heart className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600">Health record form will be implemented with comprehensive tracking.</p>
+              <p className="text-sm text-gray-500 mt-2">This will include vaccination schedules, breeding records, feeding plans, and treatment history.</p>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button 
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default LivestockHealth
