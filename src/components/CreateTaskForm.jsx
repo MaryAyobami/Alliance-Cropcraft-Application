@@ -50,6 +50,7 @@ const CreateTaskForm = ({ onTaskCreated, onCancel }) => {
       errors.due_date = "Due date is required"
     } else {
       const selectedDate = new Date(formData.due_date)
+      selectedDate.setHours(0, 0, 0, 0)
       const today = new Date()
       today.setHours(0, 0, 0, 0)
       
