@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef} from "react"
+import { useNavigate } from "react-router-dom"
 import { tasksAPI } from "../services/api"
 import { CheckCircle, Clock, Filter, Upload, Camera, X, Eye, FileText, Calendar, User, Edit, Trash2, Plus } from "lucide-react"
 import { useAuth } from "../contexts/AuthContext"
@@ -11,6 +12,7 @@ import { format } from "date-fns"
 
 const Tasks = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [tasks, setTasks] = useState([])
   const [weeklyTasks, setWeeklyTasks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -336,25 +338,32 @@ const Tasks = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
           {(showAllTasks ? filteredTasks : filteredTasks.slice(0, 6)).map((task) => (
-            <div key={task.id || Math.random()} className="card hover:shadow-lg transition-shadow">
+            <div key={task.id || Math.random()} className="card-enhanced">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
-                  {task.status === "completed" ? (
-                    <CheckCircle className="w-6 h-6 text-green-500" />
-                  ) : (
-                    <Clock className="w-6 h-6 text-gray-400" />
-                  )}
-                  <div>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${task.status === "completed" ? "bg-green-100" : "bg-blue-100"}`}>
+                    {task.status === "completed" ? (
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    ) : (
+                      <Clock className="w-5 h-5 text-blue-600" />
+                    )}
+                  </div>
+                  <div className="flex-1">
                     <h3
-                      className={`font-semibold ${task.status === "completed" ? "line-through text-gray-500" : "text-gray-900"}`}
+                      className={`text-lg font-semibold ${task.status === "completed" ? "line-through text-gray-500" : "text-gray-900"}`}
                     >
                       {task.title}
                     </h3>
-                    <span
-                      className={`inline-block px-2 py-1 text-xs font-medium rounded-full border ${getPriorityColor(task.priority)} mt-1`}
-                    >
-                      {task.priority}
-                    </span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span
+                        className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${getPriorityColor(task.priority)}`}
+                      >
+                        {task.priority}
+                      </span>
+                      <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
+                        {task.tag === "static" ? "Daily" : "One-time"}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -369,17 +378,24 @@ const Tasks = () => {
                 )}
               </div>
 
-              <p className="text-gray-600 text-sm mb-4 line-clamp-2">{task.description}</p>
+              {task.description && (
+                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{task.description}</p>
+              )}
 
-              <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                <div className="flex items-center space-x-4">
-                  <span>📅 {task.due_time}</span>
+              <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="w-4 h-4 text-gray-500" />
+                    <span className="text-gray-700 font-medium">Due: {task.due_time}</span>
+                  </div>
+                  {task.assigned_to_name && (
+                    <div className="flex items-center space-x-2">
+                      <User className="w-4 h-4 text-gray-500" />
+                      <span className="text-gray-700">{task.assigned_to_name}</span>
+                    </div>
+                  )}
                 </div>
               </div>
-
-              <span className="ml-2 text-xs px-2 py-1 rounded bg-gray-100 border border-gray-300">
-                {task.tag === "static" ? "Static (Daily)" : "Dynamic (One-time)"}
-              </span>
 
               {task.status === "completed" ? (
                 <div className="flex items-center justify-between">
@@ -459,40 +475,54 @@ const Tasks = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {(showAllWeeklyTasks ? weeklyTasks : weeklyTasks.slice(0, 6)).map((task) => (
-              <div key={task.id || Math.random()} className="card hover:shadow-lg transition-shadow">
+              <div key={task.id || Math.random()} className="card-enhanced">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-3">
-                    {task.status === "completed" ? (
-                      <CheckCircle className="w-6 h-6 text-green-500" />
-                    ) : (
-                      <Clock className="w-6 h-6 text-gray-400" />
-                    )}
-                    <div>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${task.status === "completed" ? "bg-green-100" : "bg-blue-100"}`}>
+                      {task.status === "completed" ? (
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                      ) : (
+                        <Clock className="w-5 h-5 text-blue-600" />
+                      )}
+                    </div>
+                    <div className="flex-1">
                       <h3
-                        className={`font-semibold ${task.status === "completed" ? "line-through text-gray-500" : "text-gray-900"}`}
+                        className={`text-lg font-semibold ${task.status === "completed" ? "line-through text-gray-500" : "text-gray-900"}`}
                       >
                         {task.title}
                       </h3>
-                      <span
-                        className={`inline-block px-2 py-1 text-xs font-medium rounded-full border ${getPriorityColor(task.priority)} mt-1`}
-                      >
-                        {task.priority}
-                      </span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span
+                          className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${getPriorityColor(task.priority)}`}
+                        >
+                          {task.priority}
+                        </span>
+                        <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
+                          {task.tag === "static" ? "Daily" : "One-time"}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{task.description}</p>
+                {task.description && (
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">{task.description}</p>
+                )}
 
-                <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                  <div className="flex items-center space-x-4">
-                    <span>📅 {task.due_time}</span>
+                <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="w-4 h-4 text-gray-500" />
+                      <span className="text-gray-700 font-medium">Due: {task.due_time}</span>
+                    </div>
+                    {task.assigned_to_name && (
+                      <div className="flex items-center space-x-2">
+                        <User className="w-4 h-4 text-gray-500" />
+                        <span className="text-gray-700">{task.assigned_to_name}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-
-                <span className="ml-2 text-xs px-2 py-1 rounded bg-gray-100 border border-gray-300">
-                  {task.tag === "static" ? "Static (Daily)" : "Dynamic (One-time)"}
-                </span>
 
                 <div className="flex justify-center mt-4">
                   <button
