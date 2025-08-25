@@ -138,38 +138,38 @@ const handleSaveNotifications = async () => {
 }
 
   return (
-    <div className="min-h-screen py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-primary-700 bg-clip-text text-transparent mb-2">
-            Profile Settings
-          </h1>
-          <p className="text-slate-600">Manage your account preferences and security settings</p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Profile Settings</h1>
+          <p className="text-gray-600 mt-2">Manage your account preferences and security settings</p>
         </div>
+      </div>
 
-        {/* Success Message */}
-        {message && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl text-green-800 text-center animate-pulse shadow-sm">
-            <Check className="inline-block w-5 h-5 mr-2" />
-            {message}
-          </div>
-        )}
+      {/* Success Message */}
+      {message && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm flex items-center">
+          <Check className="w-5 h-5 mr-2" />
+          {message}
+        </div>
+      )}
 
-        <div className="">
-          {/* Profile Information Card */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 hover:shadow-2xl transition-all duration-300">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Profile Information Card */}
+        <div className="lg:col-span-2">
+          <div className="card-enhanced">
             <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-primary-100 rounded-xl">
-                  <User className="w-6 h-6 text-primary-600" />
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                  <User className="w-5 h-5 text-blue-600" />
                 </div>
-                <h2 className="text-2xl font-semibold text-slate-800">Personal Information</h2>
+                <h2 className="text-xl font-semibold text-gray-900">Personal Information</h2>
               </div>
               {!editMode && (
                 <button
                   onClick={() => setEditMode(true)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-primary-50 hover:bg-primary-100 text-primary-600 rounded-xl transition-all duration-200 hover:scale-105"
+                  className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-xl flex items-center space-x-2 transition-colors"
                 >
                   <Edit3 className="w-4 h-4" />
                   <span>Edit</span>
@@ -223,7 +223,7 @@ const handleSaveNotifications = async () => {
                     value={profile.name}
                     onChange={handleProfileChange}
                     placeholder="Full Name"
-                    className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-slate-50 focus:bg-white"
+                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
                   />
                 </div>
                 <div className="relative">
@@ -234,7 +234,7 @@ const handleSaveNotifications = async () => {
                     value={profile.email}
                     onChange={handleProfileChange}
                     placeholder="Email Address"
-                    className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-slate-50 focus:bg-white"
+                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
                   />
                 </div>
                 <div className="relative">
@@ -245,7 +245,7 @@ const handleSaveNotifications = async () => {
                     value={profile.phone}
                     onChange={handleProfileChange}
                     placeholder="Phone Number"
-                    className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-slate-50 focus:bg-white"
+                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
                   />
                 </div>
                 <div className="flex space-x-3 pt-2">
@@ -326,7 +326,7 @@ const handleSaveNotifications = async () => {
                     value={passwords.current}
                     onChange={handlePasswordChange}
                     placeholder="Current Password"
-                    className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-slate-50 focus:bg-white"
+                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
                   />
                 </div>
                 <div className="relative">
@@ -337,7 +337,7 @@ const handleSaveNotifications = async () => {
                     value={passwords.new}
                     onChange={handlePasswordChange}
                     placeholder="New Password"
-                    className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-slate-50 focus:bg-white"
+                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
                   />
                 </div>
                 <div className="relative">
@@ -348,7 +348,7 @@ const handleSaveNotifications = async () => {
                     value={passwords.confirm}
                     onChange={handlePasswordChange}
                     placeholder="Confirm New Password"
-                    className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-slate-50 focus:bg-white"
+                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
                   />
                 </div>
                 <div className="flex space-x-3 pt-2">

@@ -679,11 +679,12 @@ app.get("/api/dashboard/tasks", authenticateToken, async (req, res) => {
     let query
     let params
 
-    if (userRole === "Admin User") {
+    if (["Admin", "Farm Manager", "Admin User"].includes(userRole)) {
       query = `
-        SELECT t.*, u.full_name as assigned_name 
+        SELECT t.*, u.full_name as assigned_name, c.full_name as created_by_name
         FROM tasks t 
         LEFT JOIN users u ON t.assigned_to = u.id 
+        LEFT JOIN users c ON t.created_by = c.id
         WHERE t.due_date = CURRENT_DATE 
         ORDER BY t.due_time ASC NULLS LAST
       `
@@ -941,11 +942,13 @@ app.get("/api/tasks", authenticateToken, async (req, res) => {
     // Only fetch tasks for today:
     // - Static tasks (tag='static', recurrent=true)
     // - Dynamic tasks (tag='dynamic', active_date=today)
-    if (userRole === "Admin User") {
+    // Admin and Farm Manager can see all tasks, others only see their own
+    if (["Admin", "Farm Manager", "Admin User"].includes(userRole)) {
       query = `
-        SELECT t.*, u.full_name as assigned_name 
+        SELECT t.*, u.full_name as assigned_name, c.full_name as created_by_name
         FROM tasks t 
         LEFT JOIN users u ON t.assigned_to = u.id 
+        LEFT JOIN users c ON t.created_by = c.id
         WHERE 
           (t.tag = 'static' AND t.recurrent = true)
           OR
@@ -1010,11 +1013,12 @@ app.get("/api/tasks/history/weekly", authenticateToken, async (req, res) => {
     let params
 
     // Get tasks for the current week (Monday to Sunday)
-    if (userRole === "Admin User") {
+    if (["Admin", "Farm Manager", "Admin User"].includes(userRole)) {
       query = `
-        SELECT t.*, u.full_name as assigned_name 
+        SELECT t.*, u.full_name as assigned_name, c.full_name as created_by_name
         FROM tasks t 
         LEFT JOIN users u ON t.assigned_to = u.id 
+        LEFT JOIN users c ON t.created_by = c.id
         WHERE 
           (t.tag = 'static' AND t.recurrent = true)
           OR
@@ -1071,11 +1075,12 @@ app.get("/api/tasks/history/:week", authenticateToken, async (req, res) => {
       endDate = `date_trunc('week', to_date('${year}-01-01', 'YYYY-MM-DD') + (${weekNum} - 1) * interval '7 days') + interval '7 days'`
     }
 
-    if (userRole === "Admin User") {
+    if (["Admin", "Farm Manager", "Admin User"].includes(userRole)) {
       query = `
-        SELECT t.*, u.full_name as assigned_name 
+        SELECT t.*, u.full_name as assigned_name, c.full_name as created_by_name
         FROM tasks t 
         LEFT JOIN users u ON t.assigned_to = u.id 
+        LEFT JOIN users c ON t.created_by = c.id
         WHERE 
           (t.tag = 'static' AND t.recurrent = true)
           OR
