@@ -118,6 +118,16 @@ function App() {
               </PublicRoute>
             }
           />
+           <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Dashboard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/dashboard"
             element={

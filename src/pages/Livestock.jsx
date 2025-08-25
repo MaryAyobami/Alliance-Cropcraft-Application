@@ -263,46 +263,46 @@ const Livestock = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Animals</p>
-                <p className="text-2xl font-bold text-gray-900">{totalAnimals}</p>
-              </div>
-              <Activity className="w-8 h-8 text-blue-600" />
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Animals</p>
+              <p className="text-2xl font-bold text-gray-900">{totalAnimals}</p>
             </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Healthy</p>
-                <p className="text-2xl font-bold text-green-600">{healthyAnimals}</p>
-              </div>
-              <Heart className="w-8 h-8 text-green-600" />
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Sick</p>
-                <p className="text-2xl font-bold text-red-600">{sickAnimals}</p>
-              </div>
-              <AlertTriangle className="w-8 h-8 text-red-600" />
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Needs Attention</p>
-                <p className="text-2xl font-bold text-orange-600">{criticalAnimals + quarantinedAnimals}</p>
-              </div>
-              <Shield className="w-8 h-8 text-orange-600" />
-            </div>
+            <Activity className="w-8 h-8 text-blue-600" />
           </div>
         </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Healthy</p>
+              <p className="text-2xl font-bold text-green-600">{healthyAnimals}</p>
+            </div>
+            <Heart className="w-8 h-8 text-green-600" />
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Sick</p>
+              <p className="text-2xl font-bold text-red-600">{sickAnimals}</p>
+            </div>
+            <AlertTriangle className="w-8 h-8 text-red-600" />
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Needs Attention</p>
+              <p className="text-2xl font-bold text-orange-600">{criticalAnimals + quarantinedAnimals}</p>
+            </div>
+            <Shield className="w-8 h-8 text-orange-600" />
+          </div>
+        </div>
+      </div>
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
@@ -467,276 +467,274 @@ const Livestock = () => {
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold">
-                    {modalMode === "create" && "Add New Livestock"}
-                    {modalMode === "edit" && "Edit Livestock"}
-                    {modalMode === "view" && "Livestock Details"}
-                  </h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold">
+                {modalMode === "create" && "Add New Livestock"}
+                {modalMode === "edit" && "Edit Livestock"}
+                {modalMode === "view" && "Livestock Details"}
+              </h2>
               <button 
                 onClick={() => setShowModal(false)}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="w-6 h-6" />
               </button>
-                </div>
+            </div>
 
-                {modalMode === "view" ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                        <p className="text-gray-900">{selectedLivestock?.name || "N/A"}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Species</label>
-                        <p className="text-gray-900">{selectedLivestock?.species || "N/A"}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Breed</label>
-                        <p className="text-gray-900">{selectedLivestock?.breed || "N/A"}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-                        <p className="text-gray-900">{selectedLivestock?.gender || "N/A"}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
-                        <p className="text-gray-900">{selectedLivestock?.age ? `${selectedLivestock.age} years` : "N/A"}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Weight</label>
-                        <p className="text-gray-900">{selectedLivestock?.weight ? `${selectedLivestock.weight} kg` : "N/A"}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Health Status</label>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getHealthStatusColor(selectedLivestock?.health_status)}`}>
-                          {selectedLivestock?.health_status || "N/A"}
-                        </span>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                        <p className="text-gray-900">{selectedLivestock?.location || "N/A"}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Identification Number</label>
-                        <p className="text-gray-900">{selectedLivestock?.identification_number || "N/A"}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Acquisition Date</label>
-                        <p className="text-gray-900">{selectedLivestock?.acquisition_date || "N/A"}</p>
-                      </div>
-                    </div>
-                    
-                    {selectedLivestock?.feeding_schedule && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Feeding Schedule</label>
-                        <p className="text-gray-900">{selectedLivestock.feeding_schedule}</p>
-                      </div>
-                    )}
-                    
-                    {selectedLivestock?.notes && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                        <p className="text-gray-900">{selectedLivestock.notes}</p>
-                      </div>
-                    )}
+            {modalMode === "view" ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <p className="text-gray-900">{selectedLivestock?.name || "N/A"}</p>
                   </div>
-                ) : (
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    {formError && (
-                      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                        {formError}
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Name <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          name="name"
-                          value={formData.name}
-                          onChange={handleInputChange}
-                          className={getFieldClassName('name')}
-                          placeholder="Enter animal name"
-                        />
-                        {fieldErrors.name && (
-                          <p className="text-red-500 text-xs mt-1">{fieldErrors.name}</p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Species <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          name="species"
-                          value={formData.species}
-                          onChange={handleInputChange}
-                          className={getFieldClassName('species')}
-                          placeholder="e.g., Cattle, Sheep, Goat"
-                        />
-                        {fieldErrors.species && (
-                          <p className="text-red-500 text-xs mt-1">{fieldErrors.species}</p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Breed</label>
-                        <input
-                          type="text"
-                          name="breed"
-                          value={formData.breed}
-                          onChange={handleInputChange}
-                          className={getFieldClassName('breed')}
-                          placeholder="Enter breed"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-                        <select
-                          name="gender"
-                          value={formData.gender}
-                          onChange={handleInputChange}
-                          className={getFieldClassName('gender')}
-                        >
-                          <option value="">Select gender</option>
-                          <option value="male">Male</option>
-                          <option value="female">Female</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Age (years)</label>
-                        <input
-                          type="number"
-                          name="age"
-                          value={formData.age}
-                          onChange={handleInputChange}
-                          min="0"
-                          max="50"
-                          className={getFieldClassName('age')}
-                          placeholder="Enter age"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
-                        <input
-                          type="number"
-                          name="weight"
-                          value={formData.weight}
-                          onChange={handleInputChange}
-                          min="0"
-                          step="0.1"
-                          className={getFieldClassName('weight')}
-                          placeholder="Enter weight"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Health Status</label>
-                        <select
-                          name="health_status"
-                          value={formData.health_status}
-                          onChange={handleInputChange}
-                          className={getFieldClassName('health_status')}
-                        >
-                          <option value="healthy">Healthy</option>
-                          <option value="sick">Sick</option>
-                          <option value="quarantine">Quarantine</option>
-                          <option value="deceased">Deceased</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                        <input
-                          type="text"
-                          name="location"
-                          value={formData.location}
-                          onChange={handleInputChange}
-                          className={getFieldClassName('location')}
-                          placeholder="Enter location"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Acquisition Date</label>
-                        <input
-                          type="date"
-                          name="acquisition_date"
-                          value={formData.acquisition_date}
-                          onChange={handleInputChange}
-                          max={new Date().toISOString().split('T')[0]}
-                          className={getFieldClassName('acquisition_date')}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Identification Number</label>
-                        <input
-                          type="text"
-                          name="identification_number"
-                          value={formData.identification_number}
-                          onChange={handleInputChange}
-                          className={getFieldClassName('identification_number')}
-                          placeholder="Enter ID number"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Feeding Schedule</label>
-                      <textarea
-                        name="feeding_schedule"
-                        value={formData.feeding_schedule}
-                        onChange={handleInputChange}
-                        rows={3}
-                        className={getFieldClassName('feeding_schedule')}
-                        placeholder="Enter feeding schedule details"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                      <textarea
-                        name="notes"
-                        value={formData.notes}
-                        onChange={handleInputChange}
-                        rows={3}
-                        className={getFieldClassName('notes')}
-                        placeholder="Additional notes or observations"
-                      />
-                    </div>
-
-                    <div className="flex space-x-3 pt-4">
-                      <button
-                        type="submit"
-                        className="flex-1 btn-primary"
-                      >
-                        {modalMode === "create" ? "Create Livestock" : "Update Livestock"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowModal(false)}
-                        className="flex-1 btn-secondary"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Species</label>
+                    <p className="text-gray-900">{selectedLivestock?.species || "N/A"}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Breed</label>
+                    <p className="text-gray-900">{selectedLivestock?.breed || "N/A"}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                    <p className="text-gray-900">{selectedLivestock?.gender || "N/A"}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                    <p className="text-gray-900">{selectedLivestock?.age ? `${selectedLivestock.age} years` : "N/A"}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Weight</label>
+                    <p className="text-gray-900">{selectedLivestock?.weight ? `${selectedLivestock.weight} kg` : "N/A"}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Health Status</label>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getHealthStatusColor(selectedLivestock?.health_status)}`}>
+                      {selectedLivestock?.health_status || "N/A"}
+                    </span>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                    <p className="text-gray-900">{selectedLivestock?.location || "N/A"}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Identification Number</label>
+                    <p className="text-gray-900">{selectedLivestock?.identification_number || "N/A"}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Acquisition Date</label>
+                    <p className="text-gray-900">{selectedLivestock?.acquisition_date || "N/A"}</p>
+                  </div>
+                </div>
+                
+                {selectedLivestock?.feeding_schedule && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Feeding Schedule</label>
+                    <p className="text-gray-900">{selectedLivestock.feeding_schedule}</p>
+                  </div>
+                )}
+                
+                {selectedLivestock?.notes && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                    <p className="text-gray-900">{selectedLivestock.notes}</p>
+                  </div>
                 )}
               </div>
-            </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {formError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    {formError}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      className={getFieldClassName('name')}
+                      placeholder="Enter animal name"
+                    />
+                    {fieldErrors.name && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors.name}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Species <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="species"
+                      value={formData.species}
+                      onChange={handleInputChange}
+                      className={getFieldClassName('species')}
+                      placeholder="e.g., Cattle, Sheep, Goat"
+                    />
+                    {fieldErrors.species && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors.species}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Breed</label>
+                    <input
+                      type="text"
+                      name="breed"
+                      value={formData.breed}
+                      onChange={handleInputChange}
+                      className={getFieldClassName('breed')}
+                      placeholder="Enter breed"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                    <select
+                      name="gender"
+                      value={formData.gender}
+                      onChange={handleInputChange}
+                      className={getFieldClassName('gender')}
+                    >
+                      <option value="">Select gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Age (years)</label>
+                    <input
+                      type="number"
+                      name="age"
+                      value={formData.age}
+                      onChange={handleInputChange}
+                      min="0"
+                      max="50"
+                      className={getFieldClassName('age')}
+                      placeholder="Enter age"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
+                    <input
+                      type="number"
+                      name="weight"
+                      value={formData.weight}
+                      onChange={handleInputChange}
+                      min="0"
+                      step="0.1"
+                      className={getFieldClassName('weight')}
+                      placeholder="Enter weight"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Health Status</label>
+                    <select
+                      name="health_status"
+                      value={formData.health_status}
+                      onChange={handleInputChange}
+                      className={getFieldClassName('health_status')}
+                    >
+                      <option value="healthy">Healthy</option>
+                      <option value="sick">Sick</option>
+                      <option value="quarantine">Quarantine</option>
+                      <option value="deceased">Deceased</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                    <input
+                      type="text"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleInputChange}
+                      className={getFieldClassName('location')}
+                      placeholder="Enter location"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Acquisition Date</label>
+                    <input
+                      type="date"
+                      name="acquisition_date"
+                      value={formData.acquisition_date}
+                      onChange={handleInputChange}
+                      max={new Date().toISOString().split('T')[0]}
+                      className={getFieldClassName('acquisition_date')}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Identification Number</label>
+                    <input
+                      type="text"
+                      name="identification_number"
+                      value={formData.identification_number}
+                      onChange={handleInputChange}
+                      className={getFieldClassName('identification_number')}
+                      placeholder="Enter ID number"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Feeding Schedule</label>
+                  <textarea
+                    name="feeding_schedule"
+                    value={formData.feeding_schedule}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className={getFieldClassName('feeding_schedule')}
+                    placeholder="Enter feeding schedule details"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                  <textarea
+                    name="notes"
+                    value={formData.notes}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className={getFieldClassName('notes')}
+                    placeholder="Additional notes or observations"
+                  />
+                </div>
+
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  >
+                    {modalMode === "create" ? "Create Livestock" : "Update Livestock"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
