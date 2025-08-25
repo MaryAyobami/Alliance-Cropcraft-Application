@@ -76,7 +76,7 @@ const TaskDetails = () => {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/tasks')}
             className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -101,20 +101,26 @@ const TaskDetails = () => {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Description */}
-          <div className="card">
-            <div className="flex items-center gap-2 mb-4">
-              <FileText className="w-5 h-5 text-gray-500" />
+          <div className="card-enhanced">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                <FileText className="w-5 h-5 text-blue-600" />
+              </div>
               <h3 className="text-lg font-semibold text-gray-900">Description</h3>
             </div>
-            <p className="text-gray-700 leading-relaxed">
-              {task.description || "No description provided"}
-            </p>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-gray-700 leading-relaxed">
+                {task.description || "No description provided"}
+              </p>
+            </div>
           </div>
 
           {/* Timeline */}
-          <div className="card">
-            <div className="flex items-center gap-2 mb-4">
-              <Calendar className="w-5 h-5 text-gray-500" />
+          <div className="card-enhanced">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-green-600" />
+              </div>
               <h3 className="text-lg font-semibold text-gray-900">Timeline</h3>
             </div>
             <div className="space-y-3">
@@ -139,29 +145,35 @@ const TaskDetails = () => {
 
           {/* Completion Notes */}
           {task.completion_notes && (
-            <div className="card">
-              <div className="flex items-center gap-2 mb-4">
-                <FileText className="w-5 h-5 text-gray-500" />
+            <div className="card-enhanced">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-purple-600" />
+                </div>
                 <h3 className="text-lg font-semibold text-gray-900">Completion Notes</h3>
               </div>
-              <p className="text-gray-700 bg-blue-50 p-4 rounded-lg">
-                {task.completion_notes}
-              </p>
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-gray-700">
+                  {task.completion_notes}
+                </p>
+              </div>
             </div>
           )}
 
           {/* Evidence Photo */}
           {task.evidence_photo && (
-            <div className="card">
-              <div className="flex items-center gap-2 mb-4">
-                <Camera className="w-5 h-5 text-gray-500" />
+            <div className="card-enhanced">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+                  <Camera className="w-5 h-5 text-orange-600" />
+                </div>
                 <h3 className="text-lg font-semibold text-gray-900">Evidence Photo</h3>
               </div>
               <div className="bg-green-50 p-4 rounded-lg">
                 <img
                   src={task.evidence_photo}
                   alt="Task completion evidence"
-                  className="w-full max-w-md rounded-lg object-cover"
+                  className="w-full max-w-md rounded-lg object-cover shadow-lg"
                 />
               </div>
             </div>
@@ -171,9 +183,11 @@ const TaskDetails = () => {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Task Type */}
-          <div className="card">
-            <div className="flex items-center gap-2 mb-4">
-              <Tag className="w-5 h-5 text-gray-500" />
+          <div className="card-enhanced">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+                <Tag className="w-5 h-5 text-indigo-600" />
+              </div>
               <h3 className="text-lg font-semibold text-gray-900">Task Type</h3>
             </div>
             <div className="space-y-3">
@@ -193,9 +207,11 @@ const TaskDetails = () => {
           </div>
 
           {/* Assignment */}
-          <div className="card">
-            <div className="flex items-center gap-2 mb-4">
-              <User className="w-5 h-5 text-gray-500" />
+          <div className="card-enhanced">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-cyan-100 rounded-xl flex items-center justify-center">
+                <User className="w-5 h-5 text-cyan-600" />
+              </div>
               <h3 className="text-lg font-semibold text-gray-900">Assignment</h3>
             </div>
             <div className="space-y-3">
@@ -217,9 +233,11 @@ const TaskDetails = () => {
           </div>
 
           {/* Created Date */}
-          <div className="card">
-            <div className="flex items-center gap-2 mb-4">
-              <Calendar className="w-5 h-5 text-gray-500" />
+          <div className="card-enhanced">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-emerald-600" />
+              </div>
               <h3 className="text-lg font-semibold text-gray-900">Created</h3>
             </div>
             <div className="p-3 bg-gray-50 rounded-lg">
