@@ -27,7 +27,7 @@ const PlantingTracker = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterStatus, setFilterStatus] = useState("")
+  const [filterGrowthStage, setFilterGrowthStage] = useState("")
   const [filterCrop, setFilterCrop] = useState("")
   const [showModal, setShowModal] = useState(false)
   const [modalMode, setModalMode] = useState("create") // create, edit, view
@@ -118,10 +118,10 @@ const PlantingTracker = () => {
                          planting.variety?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          planting.field_location?.toLowerCase().includes(searchTerm.toLowerCase())
     
-    const matchesStatus = !filterStatus || planting.status === filterStatus
+    const matchesGrowthStage = !filterGrowthStage || planting.growth_stage === filterGrowthStage
     const matchesCrop = !filterCrop || planting.crop_name === filterCrop
 
-    return matchesSearch && matchesStatus && matchesCrop
+    return matchesSearch && matchesGrowthStage && matchesCrop
   })
 
   const cropTypes = [...new Set(plantings.map(p => p.crop_name))]
@@ -274,17 +274,18 @@ const PlantingTracker = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Status</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Growth Stage</label>
             <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
+              value={filterGrowthStage}
+              onChange={(e) => setFilterGrowthStage(e.target.value)}
               className="w-full border border-gray-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
-              <option value="">All Status</option>
-              <option value="healthy">Healthy</option>
-              <option value="needs_attention">Needs Attention</option>
-              <option value="ready_for_harvest">Ready for Harvest</option>
-              <option value="diseased">Diseased</option>
+              <option value="">All Growth Stages</option>
+              <option value="seedling">Seedling</option>
+              <option value="vegetative">Vegetative</option>
+              <option value="flowering">Flowering</option>
+              <option value="fruiting">Fruiting</option>
+              <option value="maturation">Maturation</option>
             </select>
           </div>
 
@@ -348,7 +349,7 @@ const PlantingTracker = () => {
 
                     <div className="flex items-center space-x-2 text-sm text-gray-600">
                       <Clock className="w-4 h-4" />
-                      <span>Harvest: {new Date(planting.expected_harvest).toLocaleDateString()}</span>
+                      <span>Harvest: {planting.expected_harvest_date ? new Date(planting.expected_harvest_date).toLocaleDateString() : 'Not set'}</span>
                     </div>
 
                     <div className="border-t pt-2">

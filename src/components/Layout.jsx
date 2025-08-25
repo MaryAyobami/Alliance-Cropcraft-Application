@@ -202,8 +202,8 @@ const Layout = ({ children }) => {
 
       {/* Main content with sidebar for desktop */}
       <div className="relative z-10 flex flex-col lg:flex-row">
-        {/* Sidebar for desktop */}
-        <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:min-h-screen bg-white shadow-lg border-r border-gray-200 z-20">
+        {/* Sidebar for desktop - Fixed position */}
+        <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-0 lg:top-0 lg:w-64 lg:h-screen bg-white shadow-lg border-r border-gray-200 z-20 overflow-y-auto">
           <div className="p-6 border-b border-gray-200 flex items-center gap-3">
             {/* <CompanyLogo /> */}
             <span className="font-bold text-lg text-gray-900">Alliance CropCraft</span>
@@ -226,8 +226,8 @@ const Layout = ({ children }) => {
             </button>
           </div>
         </aside>
-        {/* Main content area */}
-        <main className="flex-1 p-2 sm:p-6">{children}</main>
+        {/* Main content area - Offset for fixed sidebar */}
+        <main className="flex-1 p-2 sm:p-6 lg:ml-64">{children}</main>
       </div>
     </div>
   );

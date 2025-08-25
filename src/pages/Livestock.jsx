@@ -14,7 +14,9 @@ import {
   Calendar,
   Hash,
   Scale,
-  Activity
+  Activity,
+  Shield,
+  TrendingUp
 } from "lucide-react"
 
 const Livestock = () => {
@@ -193,6 +195,13 @@ const Livestock = () => {
     return matchesSearch && matchesStatus && matchesSpecies
   })
 
+  // Calculate stats for dashboard boxes
+  const totalAnimals = livestock.length
+  const healthyAnimals = livestock.filter(animal => animal.health_status === 'healthy').length
+  const sickAnimals = livestock.filter(animal => animal.health_status === 'sick').length
+  const criticalAnimals = livestock.filter(animal => animal.health_status === 'critical').length
+  const quarantinedAnimals = livestock.filter(animal => animal.health_status === 'quarantine').length
+
   const getHealthStatusColor = (status) => {
     switch (status) {
       case 'healthy': return 'bg-green-100 text-green-800'
@@ -250,6 +259,59 @@ const Livestock = () => {
               <span>Add Livestock</span>
             </button>
           )}
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Animals</p>
+                <p className="text-2xl font-bold text-gray-900">{totalAnimals}</p>
+              </div>
+              <Activity className="w-8 h-8 text-blue-600" />
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Healthy</p>
+                <p className="text-2xl font-bold text-green-600">{healthyAnimals}</p>
+              </div>
+              <Heart className="w-8 h-8 text-green-600" />
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Sick</p>
+                <p className="text-2xl font-bold text-red-600">{sickAnimals}</p>
+              </div>
+              <AlertTriangle className="w-8 h-8 text-red-600" />
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Critical</p>
+                <p className="text-2xl font-bold text-orange-600">{criticalAnimals}</p>
+              </div>
+              <TrendingUp className="w-8 h-8 text-orange-600" />
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Quarantined</p>
+                <p className="text-2xl font-bold text-yellow-600">{quarantinedAnimals}</p>
+              </div>
+              <Shield className="w-8 h-8 text-yellow-600" />
+            </div>
+          </div>
         </div>
 
         {error && (

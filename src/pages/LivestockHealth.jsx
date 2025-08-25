@@ -475,7 +475,9 @@ const LivestockHealth = () => {
                           <div className="flex items-center space-x-4 text-sm text-gray-500">
                             <div className="flex items-center space-x-1">
                               <Calendar className="w-4 h-4" />
-                              <span>{new Date(record.date).toLocaleDateString()}</span>
+                              <span>
+                                {record.date ? new Date(record.date).toLocaleDateString() : 'Date not set'}
+                              </span>
                             </div>
                             {record.veterinarian && (
                               <div className="flex items-center space-x-1">
@@ -561,7 +563,12 @@ const LivestockHealth = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Date</label>
-                    <p className="mt-1 text-sm text-gray-900">{new Date(selectedRecord.record_date).toLocaleDateString()}</p>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {selectedRecord.record_date || selectedRecord.date ? 
+                        new Date(selectedRecord.record_date || selectedRecord.date).toLocaleDateString() : 
+                        'Not set'
+                      }
+                    </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Veterinarian</label>
@@ -583,10 +590,12 @@ const LivestockHealth = () => {
                       <p className="mt-1 text-sm text-gray-900">₦{selectedRecord.cost.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     </div>
                   )}
-                  {selectedRecord.next_due_date && (
+                  {(selectedRecord.next_due_date || selectedRecord.next_due) && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Next Due Date</label>
-                      <p className="mt-1 text-sm text-gray-900">{new Date(selectedRecord.next_due_date).toLocaleDateString()}</p>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {new Date(selectedRecord.next_due_date || selectedRecord.next_due).toLocaleDateString()}
+                      </p>
                     </div>
                   )}
                   {selectedRecord.notes && (
