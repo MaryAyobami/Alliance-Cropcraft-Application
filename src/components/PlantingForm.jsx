@@ -109,7 +109,9 @@ const PlantingForm = ({ planting: editPlanting, mode, onPlantingSaved, onCancel 
 
     try {
       const submitData = {
-        crop_name: formData.crop_name.trim(),
+        crop_name:  formData.crop_name === "other"
+      ? (formData.custom_crop_name || "").trim()
+      : formData.crop_name.trim(),
         variety: formData.variety.trim(),
         planting_date: formData.planting_date,
         expected_harvest_date: formData.expected_harvest_date || null,
@@ -182,9 +184,9 @@ const PlantingForm = ({ planting: editPlanting, mode, onPlantingSaved, onCancel 
             {formData.crop_name === "other" && (
               <input
                 type="text"
-                name="crop_name"
-                value=""
-                onChange={(e) => setFormData({ ...formData, crop_name: e.target.value })}
+                name="custom_crop_name"
+                value={formData.custom_crop_name || ""}
+                onChange={(e) => setFormData({ ...formData, custom_crop_name: e.target.value })}
                 className={getFieldClassName('crop_name')}
                 placeholder="Enter crop name"
               />

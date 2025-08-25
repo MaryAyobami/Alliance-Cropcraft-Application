@@ -25,7 +25,7 @@ const Register = () => {
   const { login } = useAuth()
   const navigate = useNavigate()
 
-  const roles = ["Farm Attendant", "Veterinary Doctor", "Pasture Manager", "Admin", "Farm Manager", "Maintenance Officer", "Field Production Officer"]
+  const roles = ["Farm Attendant", "Veterinary Doctor", "Pasture Officer", "Admin", "Farm Manager", "Maintenance Officer", "Feed Production Officer"]
 
   // Auto-scroll to error when error changes
   useEffect(() => {

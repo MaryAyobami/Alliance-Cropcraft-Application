@@ -215,7 +215,7 @@ const PlantingTracker = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Area</p>
-              <p className="text-2xl font-bold text-gray-900">{totalArea.toFixed(1)} acres</p>
+              <p className="text-2xl font-bold text-gray-900">{Number(totalArea || 0).toFixed(1)} acres</p>
             </div>
             <Ruler className="w-8 h-8 text-blue-600" />
           </div>
@@ -291,7 +291,7 @@ const PlantingTracker = () => {
           <div className="flex items-end">
             <div className="text-sm text-gray-600">
               <p className="font-medium">Showing: {filteredPlantings.length} plantings</p>
-              <p>Area: {filteredPlantings.reduce((sum, p) => sum + p.area_planted, 0).toFixed(1)} acres</p>
+              <p>  Area: {Number(filteredPlantings.reduce((sum, p) => sum + (Number(p.area_planted) || 0), 0)).toFixed(1)} acres</p>
             </div>
           </div>
         </div>

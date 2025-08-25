@@ -18,13 +18,7 @@ const UserForm = ({ user: editUser, mode, onUserSaved, onCancel }) => {
 
   // Available roles based on user permission
   const availableRoles = [
-    "Farm Attendant",
-    "Pasture Manager", 
-    "Veterinary Doctor",
-    "Vendor",
-    "Contractor",
-    "Visitor",
-    "Other"
+    "Farm Attendant", "Veterinary Doctor", "Pasture Officer", "Admin", "Farm Manager", "Maintenance Officer", "Feed Production Officer"
   ]
 
   // Add Farm Manager and Admin for Admin users only

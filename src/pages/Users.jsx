@@ -38,7 +38,7 @@ const Users = () => {
   const canManageUsers = ["Admin", "Farm Manager"].includes(user?.role)
 
   // Categorize users
-  const staffRoles = ["Admin", "Farm Manager", "Farm Attendant", "Pasture Manager", "Veterinary Doctor"]
+  const staffRoles = ["Admin", "Farm Manager", "Farm Attendant", "Pasture Officer", "Veterinary Doctor", "Feed Production Officer"]
   const externalRoles = ["Vendor", "Contractor", "Visitor", "Other"]
 
   useEffect(() => {
