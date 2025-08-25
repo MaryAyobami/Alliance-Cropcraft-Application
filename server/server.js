@@ -1466,16 +1466,19 @@ app.get("/api/reports/stats", authenticateToken, requireAdmin, async (req, res) 
       params = [start, end]
     }
 
-    // Task completion rate over range
+    // Task completion rate over range with more detailed stats
     const completionResult = await pool.query(
       `SELECT 
         COUNT(*) as total_tasks,
-        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_tasks
+        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_tasks,
+        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_tasks,
+        COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as in_progress_tasks,
+        COUNT(CASE WHEN status = 'overdue' THEN 1 END) as overdue_tasks
       FROM tasks ${where}`,
       params
     )
 
-    const { total_tasks, completed_tasks } = completionResult.rows[0]
+    const { total_tasks, completed_tasks, pending_tasks, in_progress_tasks, overdue_tasks } = completionResult.rows[0]
     const completionRate = total_tasks > 0 ? ((completed_tasks / total_tasks) * 100).toFixed(1) : 0
 
     // Get real livestock count (excluding deceased)
@@ -1509,6 +1512,11 @@ app.get("/api/reports/stats", authenticateToken, requireAdmin, async (req, res) 
 
     res.json({
       taskCompletionRate: Number.parseFloat(completionRate),
+      totalTasks: Number.parseInt(total_tasks),
+      completedTasks: Number.parseInt(completed_tasks),
+      pendingTasks: Number.parseInt(pending_tasks),
+      inProgressTasks: Number.parseInt(in_progress_tasks),
+      overdueTasks: Number.parseInt(overdue_tasks),
       activeLivestock,
       staffEfficiency,
       monthlyRevenue,
@@ -2826,6 +2834,213 @@ app.delete("/api/farm-resources/:id", authenticateToken, async (req, res) => {
     res.json({ message: "Resource deleted successfully" })
   } catch (error) {
     console.error("Delete farm resource error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// External Users API endpoints
+// Create external users table if it doesn't exist
+const createExternalUsersTable = async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS external_users (
+        id SERIAL PRIMARY KEY,
+        full_name VARCHAR(255) NOT NULL,
+        company_name VARCHAR(255),
+        email VARCHAR(255),
+        phone VARCHAR(20),
+        role VARCHAR(50) NOT NULL DEFAULT 'Supplier',
+        specialization TEXT,
+        contact_person VARCHAR(255),
+        address TEXT,
+        city VARCHAR(100),
+        state VARCHAR(100),
+        country VARCHAR(100) DEFAULT 'Nigeria',
+        rating DECIMAL(2,1) DEFAULT 0.0,
+        verified BOOLEAN DEFAULT false,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    console.log('External users table created/verified successfully')
+  } catch (error) {
+    console.error('Error creating external users table:', error)
+  }
+}
+
+// Call the function to create table
+createExternalUsersTable()
+
+// Get all external users
+app.get("/api/external-users", authenticateToken, async (req, res) => {
+  try {
+    const result = await queryWithRetry("SELECT * FROM external_users ORDER BY full_name")
+    res.json(result.rows)
+  } catch (error) {
+    console.error("Fetch external users error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Get external users by role (for suppliers dropdown)
+app.get("/api/external-users/suppliers", authenticateToken, async (req, res) => {
+  try {
+    const result = await queryWithRetry(`
+      SELECT id, full_name, company_name, email, phone, specialization, rating
+      FROM external_users 
+      WHERE role = 'Supplier' 
+      ORDER BY rating DESC, full_name
+    `)
+    res.json(result.rows)
+  } catch (error) {
+    console.error("Fetch suppliers error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Create external user
+app.post("/api/external-users", authenticateToken, async (req, res) => {
+  try {
+    // Check permissions - only Admin and Farm Manager can create external users
+    if (!["Admin", "Farm Manager"].includes(req.user.role)) {
+      return res.status(403).json({ message: "You do not have permission to create external users" })
+    }
+
+    const { 
+      full_name, 
+      company_name, 
+      email, 
+      phone, 
+      role, 
+      specialization, 
+      contact_person, 
+      address, 
+      city, 
+      state, 
+      country, 
+      notes 
+    } = req.body
+
+    // Validation
+    if (!full_name) {
+      return res.status(400).json({ message: "Full name is required" })
+    }
+
+    if (!role) {
+      return res.status(400).json({ message: "Role is required" })
+    }
+
+    // Check if external user exists (by email if provided, otherwise by name and company)
+    let existingUserQuery
+    let existingUserParams
+    
+    if (email) {
+      existingUserQuery = "SELECT * FROM external_users WHERE email = $1"
+      existingUserParams = [email]
+    } else {
+      existingUserQuery = "SELECT * FROM external_users WHERE full_name = $1 AND company_name = $2"
+      existingUserParams = [full_name, company_name || null]
+    }
+
+    const existingUser = await pool.query(existingUserQuery, existingUserParams)
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({ message: "External user already exists" })
+    }
+
+    // Create external user
+    const result = await pool.query(
+      `INSERT INTO external_users 
+       (full_name, company_name, email, phone, role, specialization, contact_person, address, city, state, country, notes) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) 
+       RETURNING *`,
+      [full_name, company_name, email, phone, role, specialization, contact_person, address, city, state, country || 'Nigeria', notes]
+    )
+
+    res.status(201).json(result.rows[0])
+  } catch (error) {
+    console.error("Create external user error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Update external user
+app.put("/api/external-users/:id", authenticateToken, async (req, res) => {
+  try {
+    // Check permissions - only Admin and Farm Manager can update external users
+    if (!["Admin", "Farm Manager"].includes(req.user.role)) {
+      return res.status(403).json({ message: "You do not have permission to update external users" })
+    }
+
+    const userId = req.params.id
+    const { 
+      full_name, 
+      company_name, 
+      email, 
+      phone, 
+      role, 
+      specialization, 
+      contact_person, 
+      address, 
+      city, 
+      state, 
+      country, 
+      rating,
+      verified,
+      notes 
+    } = req.body
+
+    // Validation
+    if (!full_name) {
+      return res.status(400).json({ message: "Full name is required" })
+    }
+
+    const result = await pool.query(
+      `UPDATE external_users 
+       SET full_name = $1, company_name = $2, email = $3, phone = $4, role = $5, 
+           specialization = $6, contact_person = $7, address = $8, city = $9, 
+           state = $10, country = $11, rating = $12, verified = $13, notes = $14, 
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $15 
+       RETURNING *`,
+      [
+        full_name, company_name, email, phone, role, specialization, 
+        contact_person, address, city, state, country, rating, verified, notes, userId
+      ]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "External user not found" })
+    }
+
+    res.json(result.rows[0])
+  } catch (error) {
+    console.error("Update external user error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Delete external user
+app.delete("/api/external-users/:id", authenticateToken, async (req, res) => {
+  try {
+    // Check permissions - only Admin and Farm Manager can delete external users
+    if (!["Admin", "Farm Manager"].includes(req.user.role)) {
+      return res.status(403).json({ message: "You do not have permission to delete external users" })
+    }
+
+    const userId = req.params.id
+    const result = await queryWithRetry(
+      "DELETE FROM external_users WHERE id = $1 RETURNING id",
+      [userId]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "External user not found" })
+    }
+
+    res.json({ message: "External user deleted successfully" })
+  } catch (error) {
+    console.error("Delete external user error:", error)
     res.status(500).json({ message: "Server error" })
   }
 })

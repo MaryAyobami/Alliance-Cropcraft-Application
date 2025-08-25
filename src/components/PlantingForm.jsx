@@ -10,6 +10,10 @@ const PlantingForm = ({ planting: editPlanting, mode, onPlantingSaved, onCancel 
     area_planted: "",
     location: "",
     growth_stage: "planted",
+    plant_spacing: "",
+    row_spacing: "",
+    irrigation_schedule: "",
+    irrigation_method: "",
     notes: ""
   })
   const [loading, setLoading] = useState(false)
@@ -56,6 +60,10 @@ const PlantingForm = ({ planting: editPlanting, mode, onPlantingSaved, onCancel 
         area_planted: editPlanting.area_planted?.toString() || "",
         location: editPlanting.location || "",
         growth_stage: editPlanting.growth_stage || "planted",
+        plant_spacing: editPlanting.plant_spacing || "",
+        row_spacing: editPlanting.row_spacing || "",
+        irrigation_schedule: editPlanting.irrigation_schedule || "",
+        irrigation_method: editPlanting.irrigation_method || "",
         notes: editPlanting.notes || ""
       })
     }
@@ -118,6 +126,10 @@ const PlantingForm = ({ planting: editPlanting, mode, onPlantingSaved, onCancel 
         area_planted: Number(formData.area_planted),
         location: formData.location.trim(),
         growth_stage: formData.growth_stage,
+        plant_spacing: formData.plant_spacing.trim(),
+        row_spacing: formData.row_spacing.trim(),
+        irrigation_schedule: formData.irrigation_schedule.trim(),
+        irrigation_method: formData.irrigation_method.trim(),
         notes: formData.notes.trim()
       }
 
@@ -292,6 +304,76 @@ const PlantingForm = ({ planting: editPlanting, mode, onPlantingSaved, onCancel 
           </select>
           {fieldErrors.growth_stage && (
             <p className="text-red-500 text-xs mt-1">{fieldErrors.growth_stage}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Plant Spacing (cm)</label>
+          <input
+            type="number"
+            name="plant_spacing"
+            value={formData.plant_spacing}
+            onChange={handleChange}
+            className={getFieldClassName('plant_spacing')}
+            placeholder="e.g., 30"
+            min="1"
+            step="1"
+          />
+          {fieldErrors.plant_spacing && (
+            <p className="text-red-500 text-xs mt-1">{fieldErrors.plant_spacing}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Row Spacing (cm)</label>
+          <input
+            type="number"
+            name="row_spacing"
+            value={formData.row_spacing}
+            onChange={handleChange}
+            className={getFieldClassName('row_spacing')}
+            placeholder="e.g., 75"
+            min="1"
+            step="1"
+          />
+          {fieldErrors.row_spacing && (
+            <p className="text-red-500 text-xs mt-1">{fieldErrors.row_spacing}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Irrigation Method</label>
+          <select
+            name="irrigation_method"
+            value={formData.irrigation_method}
+            onChange={handleChange}
+            className={getFieldClassName('irrigation_method')}
+          >
+            <option value="">Select irrigation method</option>
+            <option value="drip">Drip Irrigation</option>
+            <option value="sprinkler">Sprinkler</option>
+            <option value="furrow">Furrow</option>
+            <option value="flood">Flood</option>
+            <option value="manual">Manual Watering</option>
+            <option value="rainfed">Rain-fed</option>
+          </select>
+          {fieldErrors.irrigation_method && (
+            <p className="text-red-500 text-xs mt-1">{fieldErrors.irrigation_method}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Irrigation Schedule</label>
+          <input
+            type="text"
+            name="irrigation_schedule"
+            value={formData.irrigation_schedule}
+            onChange={handleChange}
+            className={getFieldClassName('irrigation_schedule')}
+            placeholder="e.g., Every 2 days, Twice weekly"
+          />
+          {fieldErrors.irrigation_schedule && (
+            <p className="text-red-500 text-xs mt-1">{fieldErrors.irrigation_schedule}</p>
           )}
         </div>
 

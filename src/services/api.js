@@ -109,6 +109,16 @@ export const livestockHealthAPI = {
   deleteHealthRecord: (id) => api.delete(`/livestock-health/${id}`),
 }
 
+// External Users API
+export const externalUsersAPI = {
+  getExternalUsers: () => api.get("/external-users"),
+  getSuppliers: () => api.get("/external-users/suppliers"),
+  getExternalUserById: (id) => api.get(`/external-users/${id}`),
+  createExternalUser: (userData) => api.post("/external-users", userData),
+  updateExternalUser: (id, userData) => api.put(`/external-users/${id}`, userData),
+  deleteExternalUser: (id) => api.delete(`/external-users/${id}`),
+}
+
 export const subscribePush = (subscription) =>
   api.post("/notifications/subscribe", subscription)
 

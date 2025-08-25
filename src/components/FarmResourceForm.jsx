@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { farmResourcesAPI } from "../services/api"
+import { farmResourcesAPI, externalUsersAPI } from "../services/api"
 
 const FarmResourceForm = ({ resource: editResource, mode, onResourceSaved, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -16,6 +16,7 @@ const FarmResourceForm = ({ resource: editResource, mode, onResourceSaved, onCan
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [fieldErrors, setFieldErrors] = useState({})
+  const [suppliers, setSuppliers] = useState([])
 
   // Available categories
   const categories = [
@@ -42,6 +43,10 @@ const FarmResourceForm = ({ resource: editResource, mode, onResourceSaved, onCan
   ]
 
   useEffect(() => {
+    fetchSuppliers()
+  }, [])
+
+  useEffect(() => {
     if (editResource && mode === "edit") {
       setFormData({
         name: editResource.name || "",
@@ -56,6 +61,17 @@ const FarmResourceForm = ({ resource: editResource, mode, onResourceSaved, onCan
       })
     }
   }, [editResource, mode])
+
+  const fetchSuppliers = async () => {
+    try {
+      const response = await externalUsersAPI.getSuppliers()
+      setSuppliers(response.data)
+    } catch (error) {
+      console.error("Failed to fetch suppliers:", error)
+      // Fallback to empty array if fetch fails
+      setSuppliers([])
+    }
+  }
 
   const validateForm = () => {
     const errors = {}
@@ -297,14 +313,24 @@ const FarmResourceForm = ({ resource: editResource, mode, onResourceSaved, onCan
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
-          <input
-            type="text"
+          <select
             name="supplier"
             value={formData.supplier}
             onChange={handleChange}
             className={getFieldClassName('supplier')}
-            placeholder="Supplier name"
-          />
+          >
+            <option value="">Select supplier</option>
+            {suppliers.map(supplier => (
+              <option key={supplier.id} value={supplier.company_name || supplier.full_name}>
+                {supplier.company_name || supplier.full_name}
+                {supplier.specialization && ` - ${supplier.specialization}`}
+                {supplier.rating > 0 && ` (${supplier.rating}★)`}
+              </option>
+            ))}
+          </select>
+          {fieldErrors.supplier && (
+            <p className="text-red-500 text-xs mt-1">{fieldErrors.supplier}</p>
+          )}
         </div>
 
         <div className="md:col-span-2">
