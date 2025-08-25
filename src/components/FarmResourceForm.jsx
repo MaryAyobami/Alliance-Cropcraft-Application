@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { farmResourcesAPI } from "../services/api"
+import { farmResourcesAPI, externalUsersAPI } from "../services/api"
 
 const FarmResourceForm = ({ resource: editResource, mode, onResourceSaved, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -13,7 +13,9 @@ const FarmResourceForm = ({ resource: editResource, mode, onResourceSaved, onCan
     supplier: "",
     expiry_date: ""
   })
+  const [externalUsers, setExternalUsers] = useState([])
   const [loading, setLoading] = useState(false)
+  const [loadingSuppliers, setLoadingSuppliers] = useState(true)
   const [error, setError] = useState("")
   const [fieldErrors, setFieldErrors] = useState({})
 

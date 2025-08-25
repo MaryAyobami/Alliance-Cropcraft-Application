@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "../contexts/AuthContext"
-import { userAPI } from "../services/api"
+import { userAPI, externalUsersAPI } from "../services/api"
 import UserForm from "../components/UserForm"
 import ExternalUserForm from "../components/ExternalUserForm"
 import { 
@@ -23,6 +23,7 @@ import {
 const Users = () => {
   const { user } = useAuth()
   const [users, setUsers] = useState([])
+  const [externalUsers, setExternalUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
@@ -48,8 +49,12 @@ const Users = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true)
-      const response = await userAPI.getUsers()
-      setUsers(response.data)
+      const [usersResponse, externalResponse] = await Promise.all([
+        userAPI.getUsers(),
+        externalUsersAPI.getExternalUsers()
+      ])
+      setUsers(usersResponse.data)
+      setExternalUsers(externalResponse.data)
       setError("")
     } catch (error) {
       console.error("Failed to fetch users:", error)
@@ -78,7 +83,13 @@ const Users = () => {
   })
 
   const activeStaff = filteredUsers.filter(u => staffRoles.includes(u.role))
-  const externalUsers = filteredUsers.filter(u => externalRoles.includes(u.role))
+  const filteredExternalUsers = externalUsers.filter(u => {
+    const matchesSearch = u.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         u.phone?.includes(searchTerm) ||
+                         u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         u.job_description?.toLowerCase().includes(searchTerm.toLowerCase())
+    return matchesSearch
+  })
 
   const getRoleBadgeColor = (role) => {
     const roleColors = {
@@ -132,9 +143,9 @@ const Users = () => {
 
   const handleExternalUserSaved = (savedUser) => {
     if (externalModalMode === "create") {
-      setUsers([...users, savedUser])
+      setExternalUsers([...externalUsers, savedUser])
     } else if (externalModalMode === "edit") {
-      setUsers(users.map(u => u.id === savedUser.id ? savedUser : u))
+      setExternalUsers(externalUsers.map(u => u.id === savedUser.id ? savedUser : u))
     }
     setShowExternalModal(false)
     setSelectedUser(null)
@@ -229,8 +240,8 @@ const Users = () => {
 
           <div className="flex items-end">
             <div className="text-sm text-gray-600">
-              <p className="font-medium">Total: {filteredUsers.length}</p>
-              <p>Staff: {activeStaff.length} | External: {externalUsers.length}</p>
+              <p className="font-medium">Total: {filteredUsers.length + filteredExternalUsers.length}</p>
+              <p>Staff: {activeStaff.length} | External: {filteredExternalUsers.length}</p>
             </div>
           </div>
         </div>
@@ -322,14 +333,14 @@ const Users = () => {
               <UserX className="w-5 h-5 text-orange-600" />
               <h2 className="text-xl font-semibold text-gray-900">External Users</h2>
               <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-sm font-medium">
-                {externalUsers.length}
+                {filteredExternalUsers.length}
               </span>
             </div>
             <p className="text-gray-600 mt-1">Vendors, contractors, and other external contacts</p>
           </div>
 
           <div className="p-6">
-            {externalUsers.length === 0 ? (
+            {filteredExternalUsers.length === 0 ? (
               <div className="text-center py-8">
                 <UsersIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No external users found</h3>
@@ -337,26 +348,26 @@ const Users = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {externalUsers.map((externalUser) => (
+                {filteredExternalUsers.map((externalUser) => (
                   <div key={externalUser.id} className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-900">{externalUser.full_name}</h3>
-                        <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full border ${getRoleBadgeColor(externalUser.role)}`}>
-                          {externalUser.role}
+                        <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full border bg-orange-100 text-orange-700 border-orange-200`}>
+                          {externalUser.job_description}
                         </span>
                       </div>
                     </div>
 
                     <div className="space-y-2 mb-4">
                       <div className="flex items-center space-x-2 text-sm text-gray-600">
-                        <Mail className="w-4 h-4" />
-                        <span>{externalUser.email}</span>
+                        <Phone className="w-4 h-4" />
+                        <span>{externalUser.phone}</span>
                       </div>
-                      {externalUser.phone && (
+                      {externalUser.email && (
                         <div className="flex items-center space-x-2 text-sm text-gray-600">
-                          <Phone className="w-4 h-4" />
-                          <span>{externalUser.phone}</span>
+                          <Mail className="w-4 h-4" />
+                          <span>{externalUser.email}</span>
                         </div>
                       )}
                       <div className="flex items-center space-x-2 text-sm text-gray-600">

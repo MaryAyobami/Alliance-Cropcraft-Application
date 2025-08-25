@@ -2676,6 +2676,150 @@ app.delete("/api/livestock-health/:id", authenticateToken, async (req, res) => {
   }
 })
 
+// External Users API (separate from main users)
+app.get("/api/external-users", authenticateToken, async (req, res) => {
+  try {
+    const result = await queryWithRetry(
+      `SELECT * FROM external_users ORDER BY created_at DESC`
+    )
+    res.json(result.rows)
+  } catch (error) {
+    console.error("Get external users error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+app.get("/api/external-users/:id", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.params.id
+    const result = await queryWithRetry(
+      "SELECT * FROM external_users WHERE id = $1",
+      [userId]
+    )
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "External user not found" })
+    }
+    
+    res.json(result.rows[0])
+  } catch (error) {
+    console.error("Get external user error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+app.post("/api/external-users", authenticateToken, async (req, res) => {
+  try {
+    // Check permissions - only Admin and Farm Manager can create external users
+    if (!["Admin", "Farm Manager"].includes(req.user.role)) {
+      return res.status(403).json({ message: "You do not have permission to create external users" })
+    }
+
+    const { 
+      full_name, 
+      phone, 
+      job_description, 
+      email,
+      company,
+      address,
+      notes
+    } = req.body
+
+    if (!full_name || !phone || !job_description) {
+      return res.status(400).json({ message: "Full name, phone, and job description are required" })
+    }
+
+    // Check if external user with this phone already exists
+    const existingUser = await queryWithRetry(
+      "SELECT * FROM external_users WHERE phone = $1",
+      [phone]
+    )
+    
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({ message: "External user with this phone number already exists" })
+    }
+
+    const result = await queryWithRetry(
+      `INSERT INTO external_users 
+       (full_name, phone, job_description, email, company, address, notes, created_at) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) 
+       RETURNING *`,
+      [full_name, phone, job_description, email || null, company || null, address || null, notes || null]
+    )
+
+    res.status(201).json(result.rows[0])
+  } catch (error) {
+    console.error("Create external user error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+app.put("/api/external-users/:id", authenticateToken, async (req, res) => {
+  try {
+    // Check permissions - only Admin and Farm Manager can update external users
+    if (!["Admin", "Farm Manager"].includes(req.user.role)) {
+      return res.status(403).json({ message: "You do not have permission to update external users" })
+    }
+
+    const userId = req.params.id
+    const { 
+      full_name, 
+      phone, 
+      job_description, 
+      email,
+      company,
+      address,
+      notes
+    } = req.body
+
+    if (!full_name || !phone || !job_description) {
+      return res.status(400).json({ message: "Full name, phone, and job description are required" })
+    }
+
+    const result = await queryWithRetry(
+      `UPDATE external_users 
+       SET full_name = $1, phone = $2, job_description = $3, email = $4, 
+           company = $5, address = $6, notes = $7, updated_at = NOW()
+       WHERE id = $8 
+       RETURNING *`,
+      [full_name, phone, job_description, email || null, company || null, address || null, notes || null, userId]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "External user not found" })
+    }
+
+    res.json(result.rows[0])
+  } catch (error) {
+    console.error("Update external user error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+app.delete("/api/external-users/:id", authenticateToken, async (req, res) => {
+  try {
+    // Check permissions - only Admin and Farm Manager can delete external users
+    if (!["Admin", "Farm Manager"].includes(req.user.role)) {
+      return res.status(403).json({ message: "You do not have permission to delete external users" })
+    }
+
+    const userId = req.params.id
+    const result = await queryWithRetry(
+      "DELETE FROM external_users WHERE id = $1 RETURNING id",
+      [userId]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "External user not found" })
+    }
+
+    res.json({ message: "External user deleted successfully" })
+  } catch (error) {
+    console.error("Delete external user error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
 // Farm Resources API
 app.get("/api/farm-resources", authenticateToken, async (req, res) => {
   try {
