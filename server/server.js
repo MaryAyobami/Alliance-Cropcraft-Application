@@ -1466,16 +1466,19 @@ app.get("/api/reports/stats", authenticateToken, requireAdmin, async (req, res) 
       params = [start, end]
     }
 
-    // Task completion rate over range
+    // Task completion rate over range with more detailed stats
     const completionResult = await pool.query(
       `SELECT 
         COUNT(*) as total_tasks,
-        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_tasks
+        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_tasks,
+        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_tasks,
+        COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as in_progress_tasks,
+        COUNT(CASE WHEN status = 'overdue' THEN 1 END) as overdue_tasks
       FROM tasks ${where}`,
       params
     )
 
-    const { total_tasks, completed_tasks } = completionResult.rows[0]
+    const { total_tasks, completed_tasks, pending_tasks, in_progress_tasks, overdue_tasks } = completionResult.rows[0]
     const completionRate = total_tasks > 0 ? ((completed_tasks / total_tasks) * 100).toFixed(1) : 0
 
     // Get real livestock count (excluding deceased)
@@ -1509,6 +1512,11 @@ app.get("/api/reports/stats", authenticateToken, requireAdmin, async (req, res) 
 
     res.json({
       taskCompletionRate: Number.parseFloat(completionRate),
+      totalTasks: Number.parseInt(total_tasks),
+      completedTasks: Number.parseInt(completed_tasks),
+      pendingTasks: Number.parseInt(pending_tasks),
+      inProgressTasks: Number.parseInt(in_progress_tasks),
+      overdueTasks: Number.parseInt(overdue_tasks),
       activeLivestock,
       staffEfficiency,
       monthlyRevenue,
