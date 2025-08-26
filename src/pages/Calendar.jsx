@@ -16,7 +16,7 @@ const Calendar = () => {
     event_date: "",
     event_time: "",
     location: "",
-    type: "meeting",
+    type: "Event",
     priority: "medium",
     reminder_minutes: 30,
     notify: true,
@@ -95,7 +95,7 @@ const Calendar = () => {
         event_date: "",
         event_time: "",
         location: "",
-        type: "meeting",
+        type: "Event",
         priority: "medium",
         reminder_minutes: 30,
         notify: true,
@@ -426,7 +426,6 @@ const Calendar = () => {
                     value={newEvent.type}
                     onChange={(e) => setNewEvent({ ...newEvent, type: e.target.value })}
                   >
-                    <option value="Task">Task</option>
                     <option value="Event">Event</option>
                     <option value="Meeting">Meeting</option>
                   </select>
@@ -455,6 +454,21 @@ const Calendar = () => {
                   onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
                 />
                 {fieldErrors.location && <p className="text-xs text-red-500 mt-1">{fieldErrors.location}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Participant Emails</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Enter participant emails separated by commas (e.g., user1@email.com, user2@email.com)"
+                  value={newEvent.participants}
+                  onChange={(e) => setNewEvent({ ...newEvent, participants: e.target.value })}
+                />
+                {fieldErrors.participants && <p className="text-xs text-red-500 mt-1">{fieldErrors.participants}</p>}
+                <p className="text-gray-500 text-xs mt-1">
+                  Participants will receive email invitations and calendar sync notifications
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -560,7 +574,6 @@ const Calendar = () => {
                     value={editingEvent.type}
                     onChange={(e) => setEditingEvent({ ...editingEvent, type: e.target.value })}
                   >
-                    <option value="Task">Task</option>
                     <option value="Event">Event</option>
                     <option value="Meeting">Meeting</option>
                   </select>
@@ -587,6 +600,20 @@ const Calendar = () => {
                   value={editingEvent.location || ""}
                   onChange={(e) => setEditingEvent({ ...editingEvent, location: e.target.value })}
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Participant Emails</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Enter participant emails separated by commas"
+                  value={editingEvent.participants || ""}
+                  onChange={(e) => setEditingEvent({ ...editingEvent, participants: e.target.value })}
+                />
+                <p className="text-gray-500 text-xs mt-1">
+                  Updated participants will receive new invitations
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

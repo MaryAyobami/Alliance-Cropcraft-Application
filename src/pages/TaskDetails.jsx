@@ -13,9 +13,18 @@ const TaskDetails = () => {
     const fetchTask = async () => {
       try {
         const response = await tasksAPI.getTaskDetails(id)
+        console.log('Task details response:', response) // Debug log
+        
         // Handle different response structures
         const taskData = response.data?.data || response.data
-        setTask(taskData)
+        console.log('Processed task data:', taskData) // Debug log
+        
+        if (taskData && taskData.id) {
+          setTask(taskData)
+        } else {
+          console.warn('No valid task data received:', taskData)
+          setTask(null)
+        }
       } catch (error) {
         console.error('Failed to fetch task details:', error)
         setTask(null)
@@ -23,7 +32,13 @@ const TaskDetails = () => {
         setLoading(false)
       }
     }
-    fetchTask()
+    
+    if (id) {
+      fetchTask()
+    } else {
+      console.error('No task ID provided')
+      setLoading(false)
+    }
   }, [id])
 
   const getPriorityColor = (priority) => {

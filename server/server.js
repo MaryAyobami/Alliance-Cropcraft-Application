@@ -171,7 +171,7 @@ const authenticateToken = (req, res, next) => {
 // Admin guard
 function requireAdmin(req, res, next) {
   const role = req.user?.role
-  if (role === 'Admin User' || role === 'Admin') return next()
+  if (role === 'Admin') return next()
   return res.status(403).json({ message: 'Admin access required' })
 }
 
@@ -635,7 +635,7 @@ app.get("/api/dashboard/stats", authenticateToken, async (req, res) => {
     let todayTasksQuery
     let todayTasksParams
 
-    if (userRole === "Admin User") {
+    if (userRole === "Admin") {
       todayTasksQuery = "SELECT * FROM tasks WHERE due_date = CURRENT_DATE"
       todayTasksParams = []
     } else {
@@ -654,7 +654,7 @@ app.get("/api/dashboard/stats", authenticateToken, async (req, res) => {
     let weekTasksQuery
     let weekTasksParams
 
-    if (userRole === "Admin User") {
+    if (userRole === "Admin") {
       weekTasksQuery = `
         SELECT COUNT(*) as count FROM tasks 
         WHERE due_date >= DATE_TRUNC('week', CURRENT_DATE) 
@@ -675,7 +675,7 @@ app.get("/api/dashboard/stats", authenticateToken, async (req, res) => {
     const thisWeekTasks = Number.parseInt(weekTasksResult.rows[0].count)
 
     // Get active staff count (for admin)
-    const staffResult = await pool.query("SELECT COUNT(*) as count FROM users WHERE role != $1", ["Admin User"])
+    const staffResult = await pool.query("SELECT COUNT(*) as count FROM users WHERE role != $1", ["Admin"])
     const activeStaff = Number.parseInt(staffResult.rows[0].count)
 
     // Get completion rate (based on today's tasks)
@@ -702,7 +702,7 @@ app.get("/api/dashboard/tasks", authenticateToken, async (req, res) => {
     let query
     let params
 
-    if (["Admin", "Farm Manager", "Admin User"].includes(userRole)) {
+    if (["Admin", "Farm Manager"].includes(userRole)) {
       query = `
         SELECT t.*, u.full_name as assigned_name, c.full_name as created_by_name
         FROM tasks t 
@@ -966,7 +966,7 @@ app.get("/api/tasks", authenticateToken, async (req, res) => {
     // - Static tasks (tag='static', recurrent=true)
     // - Dynamic tasks (tag='dynamic', active_date=today)
     // Admin and Farm Manager can see all tasks, others only see their own
-    if (["Admin", "Farm Manager", "Admin User"].includes(userRole)) {
+    if (["Admin", "Farm Manager"].includes(userRole)) {
       query = `
         SELECT t.*, u.full_name as assigned_name, c.full_name as created_by_name
         FROM tasks t 
@@ -1168,7 +1168,7 @@ app.get("/api/tasks/history/weekly", authenticateToken, async (req, res) => {
     let params
 
     // Get tasks for the current week (Monday to Sunday)
-    if (["Admin", "Farm Manager", "Admin User"].includes(userRole)) {
+    if (["Admin", "Farm Manager"].includes(userRole)) {
       query = `
         SELECT t.*, u.full_name as assigned_name, c.full_name as created_by_name
         FROM tasks t 
@@ -1230,7 +1230,7 @@ app.get("/api/tasks/history/:week", authenticateToken, async (req, res) => {
       endDate = `date_trunc('week', to_date('${year}-01-01', 'YYYY-MM-DD') + (${weekNum} - 1) * interval '7 days') + interval '7 days'`
     }
 
-    if (["Admin", "Farm Manager", "Admin User"].includes(userRole)) {
+    if (["Admin", "Farm Manager"].includes(userRole)) {
       query = `
         SELECT t.*, u.full_name as assigned_name, c.full_name as created_by_name
         FROM tasks t 
@@ -1308,7 +1308,7 @@ app.put("/api/tasks/:id/complete", authenticateToken, async (req, res) => {
     const taskId = req.params.id
 
     const result = await pool.query(
-      "UPDATE tasks SET status = $1, completed_at = CURRENT_TIMESTAMP WHERE id = $2 AND (assigned_to = $3 OR $4 = 'Admin User') RETURNING *",
+      "UPDATE tasks SET status = $1, completed_at = CURRENT_TIMESTAMP WHERE id = $2 AND (assigned_to = $3 OR $4 = 'Admin') RETURNING *",
       ["completed", taskId, req.user.id, req.user.role],
     )
 
@@ -1918,7 +1918,7 @@ app.get("/api/reports/staff-performance", authenticateToken, requireAdmin, async
         ROUND(AVG(CASE WHEN t.status = 'completed' THEN 100 ELSE 0 END), 1) as efficiency
       FROM users u
       LEFT JOIN tasks t ON u.id = t.assigned_to ${dateFilter}
-      WHERE u.role != 'Admin User'
+      WHERE u.role != 'Admin'
       GROUP BY u.id, u.full_name, u.role
       ORDER BY tasks_completed DESC
       LIMIT 5`,

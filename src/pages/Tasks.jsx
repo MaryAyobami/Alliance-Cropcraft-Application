@@ -18,6 +18,7 @@ const Tasks = () => {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState("all")
   const [showStaffOverview, setShowStaffOverview] = useState(false)
+  const [staffViewMode, setStaffViewMode] = useState("cards") // cards, table
   const [showCreateTaskForm, setShowCreateTaskForm] = useState(false)
   const [showCompletionForm, setShowCompletionForm] = useState(false)
   const [showTaskDetails, setShowTaskDetails] = useState(false)
@@ -351,14 +352,7 @@ const Tasks = () => {
                 <option value="completed">Completed</option>
               </select>
             </div>
-            {["Admin", "Farm Manager"].includes(user?.role) && (
-              <button
-                className="px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 text-sm font-medium rounded-xl border border-blue-200 transition-all"
-                onClick={() => setShowStaffOverview(true)}
-              >
-                Staff Overview
-              </button>
-            )}
+
             {canCreate && (
               <button
                 className="btn-primary text-sm"
@@ -543,12 +537,14 @@ const Tasks = () => {
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-900">Staff Tasks</h2>
-        <button
-          onClick={() => setShowStaffOverview(true)}
-          className="px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 text-sm font-medium rounded-xl border border-blue-200 transition-all"
-        >
-          View Staff Overview
-        </button>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setStaffViewMode(staffViewMode === 'cards' ? 'table' : 'cards')}
+            className="px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 text-sm font-medium rounded-xl border border-blue-200 transition-all"
+          >
+            {staffViewMode === 'cards' ? 'Table View' : 'Card View'}
+          </button>
+        </div>
       </div>
 
       {categorizedTasks.staff.length === 0 ? (
@@ -557,7 +553,91 @@ const Tasks = () => {
           <h3 className="text-lg font-medium text-gray-900 mb-2">No staff tasks</h3>
           <p className="text-gray-600">No tasks have been assigned to staff members.</p>
         </div>
+      ) : staffViewMode === 'table' ? (
+        /* Staff Tasks Table View */
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="text-left p-3 font-medium text-gray-700 border-b">Task</th>
+                  <th className="text-left p-3 font-medium text-gray-700 border-b">Assigned To</th>
+                  <th className="text-left p-3 font-medium text-gray-700 border-b">Due Date</th>
+                  <th className="text-left p-3 font-medium text-gray-700 border-b">Due Time</th>
+                  <th className="text-left p-3 font-medium text-gray-700 border-b">Status</th>
+                  <th className="text-left p-3 font-medium text-gray-700 border-b">Priority</th>
+                  <th className="text-left p-3 font-medium text-gray-700 border-b">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {categorizedTasks.staff.map((task) => (
+                  <tr key={task.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="p-3 border-b">
+                      <div>
+                        <div className="font-medium text-gray-900">{task.title}</div>
+                        {task.description && (
+                          <div className="text-sm text-gray-600 line-clamp-1">{task.description}</div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-3 border-b">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                          <span className="text-xs font-medium text-blue-600">
+                            {task.assigned_name ? task.assigned_name.split(' ').map(n => n[0]).join('') : 'UN'}
+                          </span>
+                        </div>
+                        <span className="text-sm text-gray-700">{task.assigned_name || 'Unassigned'}</span>
+                      </div>
+                    </td>
+                    <td className="p-3 border-b">
+                      <span className="text-sm text-gray-600">{task.due_date || 'Not set'}</span>
+                    </td>
+                    <td className="p-3 border-b">
+                      <span className="text-sm text-gray-600">{task.due_time || 'Not set'}</span>
+                    </td>
+                    <td className="p-3 border-b">
+                      <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
+                        task.status === 'completed' 
+                          ? 'bg-green-100 text-green-800' 
+                          : task.status === 'pending'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {task.status}
+                      </span>
+                    </td>
+                    <td className="p-3 border-b">
+                      <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(task.priority)}`}>
+                        {task.priority}
+                      </span>
+                    </td>
+                    <td className="p-3 border-b">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => navigate(`/task-details/${task.id}`)}
+                          className="px-2 py-1 text-blue-600 hover:bg-blue-50 text-xs font-medium rounded transition-all"
+                        >
+                          View
+                        </button>
+                        {task.status !== 'completed' && task.assigned_to && (
+                          <button
+                            onClick={() => handleSendReminder(task.id, task.assigned_to)}
+                            className="px-2 py-1 text-orange-600 hover:bg-orange-50 text-xs font-medium rounded transition-all"
+                          >
+                            Remind
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ) : (
+        /* Staff Tasks Card View */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {categorizedTasks.staff.slice(0, 6).map((task) => (
             <div 
@@ -636,6 +716,7 @@ const Tasks = () => {
             </div>
           ))}
         </div>
+        )}
       )}
     </div>
   </>
