@@ -13,8 +13,11 @@ const TaskDetails = () => {
     const fetchTask = async () => {
       try {
         const response = await tasksAPI.getTaskDetails(id)
-        setTask(response.data)
+        // Handle different response structures
+        const taskData = response.data?.data || response.data
+        setTask(taskData)
       } catch (error) {
+        console.error('Failed to fetch task details:', error)
         setTask(null)
       } finally {
         setLoading(false)

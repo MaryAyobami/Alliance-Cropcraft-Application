@@ -20,6 +20,29 @@ try {
   console.warn('Notifications module not found, continuing without it');
 }
 
+// Email sending function
+const sendNotificationEmail = async (mailOptions) => {
+  try {
+    if (notificationSystem?.emailer) {
+      await notificationSystem.emailer.sendMail(mailOptions);
+    } else {
+      // Fallback: create emailer directly
+      const nodemailer = require('nodemailer');
+      const emailer = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER || 'ogunmolamaryayobami@gmail.com',
+          pass: process.env.EMAIL_APP_PASSWORD || 'vglx evpx phmy rgmy'
+        }
+      });
+      await emailer.sendMail(mailOptions);
+    }
+  } catch (error) {
+    console.error('Failed to send email:', error);
+    throw error;
+  }
+}
+
 const app = express()
 const port = process.env.PORT || 5000
 
@@ -1468,9 +1491,9 @@ app.post("/api/events", authenticateToken, async (req, res) => {
       })
     }
 
-    if (type && !["Task", "Meeting", "Appointment", "Reminder", "Other"].includes(type)) {
+    if (type && !["meeting", "event"].includes(type.toLowerCase())) {
       return res.status(400).json({ 
-        message: "Event type must be one of: Task, Meeting, Appointment, Reminder, Other",
+        message: "Event type must be either 'meeting' or 'event'",
         field: "type"
       })
     }
@@ -1508,22 +1531,47 @@ app.post("/api/events", authenticateToken, async (req, res) => {
       }
     }
 
-    const result = await queryWithRetry(
-      `INSERT INTO events 
-       (title, description, event_date, event_time, location, type, priority, created_by, participants, created_at) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()) RETURNING *`,
-      [
-        title.trim(),
-        description ? description.trim() : null,
-        event_date,
-        event_time || null,
-        location ? location.trim() : null,
-        type || "Task",
-        priority ? priority.toLowerCase() : "medium",
-        created_by,
-        participantEmails.length > 0 ? participantEmails.join(',') : null
-      ],
-    )
+    // Try to insert with participants column, fallback if column doesn't exist
+    let result
+    try {
+      result = await queryWithRetry(
+        `INSERT INTO events 
+         (title, description, event_date, event_time, location, type, priority, created_by, participants, created_at) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()) RETURNING *`,
+        [
+          title.trim(),
+          description ? description.trim() : null,
+          event_date,
+          event_time || null,
+          location ? location.trim() : null,
+          type || "meeting",
+          priority ? priority.toLowerCase() : "medium",
+          created_by,
+          participantEmails.length > 0 ? participantEmails.join(',') : null
+        ],
+      )
+    } catch (columnError) {
+      // If participants column doesn't exist, insert without it
+      if (columnError.message?.includes('participants')) {
+        result = await queryWithRetry(
+          `INSERT INTO events 
+           (title, description, event_date, event_time, location, type, priority, created_by, created_at) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING *`,
+          [
+            title.trim(),
+            description ? description.trim() : null,
+            event_date,
+            event_time || null,
+            location ? location.trim() : null,
+            type || "meeting",
+            priority ? priority.toLowerCase() : "medium",
+            created_by
+          ],
+        )
+      } else {
+        throw columnError
+      }
+    }
 
     const createdEvent = result.rows[0]
 
@@ -1690,29 +1738,60 @@ app.put("/api/events/:id", authenticateToken, async (req, res) => {
       }
     }
 
-    const result = await pool.query(
-      `UPDATE events SET 
-        title = COALESCE($1, title),
-        description = COALESCE($2, description),
-        event_date = COALESCE($3, event_date),
-        event_time = COALESCE($4, event_time),
-        location = COALESCE($5, location),
-        type = COALESCE($6, type),
-        priority = COALESCE($7, priority),
-        participants = COALESCE($8, participants)
-      WHERE id = $9 RETURNING *`,
-      [
-        title || null, 
-        description || null, 
-        event_date || null, 
-        event_time || null, 
-        location || null, 
-        type || null, 
-        priority || null, 
-        participants !== undefined ? (participantEmails.length > 0 ? participantEmails.join(',') : null) : undefined,
-        id
-      ]
-    )
+    // Try to update with participants column, fallback if column doesn't exist
+    let result
+    try {
+      result = await pool.query(
+        `UPDATE events SET 
+          title = COALESCE($1, title),
+          description = COALESCE($2, description),
+          event_date = COALESCE($3, event_date),
+          event_time = COALESCE($4, event_time),
+          location = COALESCE($5, location),
+          type = COALESCE($6, type),
+          priority = COALESCE($7, priority),
+          participants = COALESCE($8, participants)
+        WHERE id = $9 RETURNING *`,
+        [
+          title || null, 
+          description || null, 
+          event_date || null, 
+          event_time || null, 
+          location || null, 
+          type || null, 
+          priority || null, 
+          participants !== undefined ? (participantEmails.length > 0 ? participantEmails.join(',') : null) : undefined,
+          id
+        ]
+      )
+    } catch (columnError) {
+      // If participants column doesn't exist, update without it
+      if (columnError.message?.includes('participants')) {
+        result = await pool.query(
+          `UPDATE events SET 
+            title = COALESCE($1, title),
+            description = COALESCE($2, description),
+            event_date = COALESCE($3, event_date),
+            event_time = COALESCE($4, event_time),
+            location = COALESCE($5, location),
+            type = COALESCE($6, type),
+            priority = COALESCE($7, priority)
+          WHERE id = $8 RETURNING *`,
+          [
+            title || null, 
+            description || null, 
+            event_date || null, 
+            event_time || null, 
+            location || null, 
+            type || null, 
+            priority || null, 
+            id
+          ]
+        )
+      } else {
+        throw columnError
+      }
+    }
 
     res.json(result.rows[0])
   } catch (error) {
