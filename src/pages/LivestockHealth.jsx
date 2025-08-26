@@ -290,60 +290,204 @@ const LivestockHealth = () => {
         </div>
       )}
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="bg-green-100 p-3 rounded-lg">
-              <CheckCircle className="w-6 h-6 text-green-600" />
+      {/* Health Overview Dashboard */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        {/* Health Status Overview */}
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl shadow-sm border border-green-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="bg-green-100 p-3 rounded-xl">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Health Status</h3>
+                <p className="text-sm text-gray-600">Overall herd condition</p>
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Healthy Animals</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {livestock.filter(a => a.health_status === 'healthy').length}
-              </p>
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-700">Healthy</span>
+              <div className="flex items-center space-x-2">
+                <div className="w-24 bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-green-500 h-2 rounded-full" 
+                    style={{width: `${livestock.length > 0 ? (livestock.filter(a => a.health_status === 'healthy').length / livestock.length) * 100 : 0}%`}}
+                  ></div>
+                </div>
+                <span className="text-sm font-medium text-gray-900">
+                  {livestock.filter(a => a.health_status === 'healthy').length}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-700">Under Treatment</span>
+              <div className="flex items-center space-x-2">
+                <div className="w-24 bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-yellow-500 h-2 rounded-full" 
+                    style={{width: `${livestock.length > 0 ? (livestock.filter(a => a.health_status === 'under_treatment').length / livestock.length) * 100 : 0}%`}}
+                  ></div>
+                </div>
+                <span className="text-sm font-medium text-gray-900">
+                  {livestock.filter(a => a.health_status === 'under_treatment').length}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-700">Critical</span>
+              <div className="flex items-center space-x-2">
+                <div className="w-24 bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-red-500 h-2 rounded-full" 
+                    style={{width: `${livestock.length > 0 ? (livestock.filter(a => a.health_status === 'sick' || a.health_status === 'quarantine').length / livestock.length) * 100 : 0}%`}}
+                  ></div>
+                </div>
+                <span className="text-sm font-medium text-gray-900">
+                  {livestock.filter(a => a.health_status === 'sick' || a.health_status === 'quarantine').length}
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center">
+        {/* Vaccination Schedule */}
+        <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-6 rounded-xl shadow-sm border border-purple-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="bg-purple-100 p-3 rounded-xl">
+                <Syringe className="w-6 h-6 text-purple-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Vaccination Status</h3>
+                <p className="text-sm text-gray-600">Immunization tracking</p>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div className="bg-white p-4 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Due This Week</span>
+                <span className="text-xl font-bold text-purple-600">
+                  {getUpcomingDueDates().filter(r => r.type === 'vaccination').length}
+                </span>
+              </div>
+              <div className="text-xs text-gray-500">
+                {getUpcomingDueDates().filter(r => r.type === 'vaccination').length > 0 
+                  ? 'Vaccinations scheduled' 
+                  : 'All vaccinations up to date'
+                }
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Completed This Month</span>
+                <span className="text-xl font-bold text-green-600">
+                  {healthRecords.filter(r => {
+                    const recordDate = new Date(r.date)
+                    const thisMonth = new Date()
+                    return r.type === 'vaccination' && 
+                           recordDate.getMonth() === thisMonth.getMonth() && 
+                           recordDate.getFullYear() === thisMonth.getFullYear()
+                  }).length}
+                </span>
+              </div>
+              <div className="text-xs text-gray-500">Recent immunizations</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Health Insights */}
+        <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-6 rounded-xl shadow-sm border border-blue-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="bg-blue-100 p-3 rounded-xl">
+                <Activity className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Health Insights</h3>
+                <p className="text-sm text-gray-600">Recent activity overview</p>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div className="bg-white p-4 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Total Health Records</span>
+                <span className="text-xl font-bold text-blue-600">{healthRecords.length}</span>
+              </div>
+              <div className="text-xs text-gray-500">Comprehensive health tracking</div>
+            </div>
+            <div className="bg-white p-4 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">This Week's Activities</span>
+                <span className="text-xl font-bold text-green-600">
+                  {healthRecords.filter(r => {
+                    const recordDate = new Date(r.date)
+                    const weekAgo = new Date()
+                    weekAgo.setDate(weekAgo.getDate() - 7)
+                    return recordDate >= weekAgo
+                  }).length}
+                </span>
+              </div>
+              <div className="text-xs text-gray-500">Recent health interventions</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Detailed Health Categories */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-4">
             <div className="bg-red-100 p-3 rounded-lg">
-              <AlertTriangle className="w-6 h-6 text-red-600" />
+              <Heart className="w-6 h-6 text-red-600" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Need Attention</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {livestock.filter(a => a.health_status === 'sick' || a.health_status === 'under_treatment').length}
-              </p>
-            </div>
+            <span className="text-2xl font-bold text-gray-900">
+              {healthRecords.filter(r => r.type === 'health_check').length}
+            </span>
           </div>
+          <h4 className="text-sm font-semibold text-gray-900 mb-1">Health Checkups</h4>
+          <p className="text-xs text-gray-600">Regular examinations</p>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="bg-purple-100 p-3 rounded-lg">
-              <Syringe className="w-6 h-6 text-purple-600" />
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div className="bg-pink-100 p-3 rounded-lg">
+              <Baby className="w-6 h-6 text-pink-600" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Due Vaccinations</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {getUpcomingDueDates().filter(r => r.type === 'vaccination').length}
-              </p>
-            </div>
+            <span className="text-2xl font-bold text-gray-900">
+              {healthRecords.filter(r => r.type === 'breeding').length}
+            </span>
           </div>
+          <h4 className="text-sm font-semibold text-gray-900 mb-1">Breeding Records</h4>
+          <p className="text-xs text-gray-600">Reproductive health</p>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="bg-blue-100 p-3 rounded-lg">
-              <Heart className="w-6 h-6 text-blue-600" />
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div className="bg-orange-100 p-3 rounded-lg">
+              <Utensils className="w-6 h-6 text-orange-600" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Records</p>
-              <p className="text-2xl font-bold text-gray-900">{healthRecords.length}</p>
-            </div>
+            <span className="text-2xl font-bold text-gray-900">
+              {healthRecords.filter(r => r.type === 'feeding').length}
+            </span>
           </div>
+          <h4 className="text-sm font-semibold text-gray-900 mb-1">Feeding Logs</h4>
+          <p className="text-xs text-gray-600">Nutrition tracking</p>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div className="bg-yellow-100 p-3 rounded-lg">
+              <FileText className="w-6 h-6 text-yellow-600" />
+            </div>
+            <span className="text-2xl font-bold text-gray-900">
+              {healthRecords.filter(r => r.type === 'treatment').length}
+            </span>
+          </div>
+          <h4 className="text-sm font-semibold text-gray-900 mb-1">Treatments</h4>
+          <p className="text-xs text-gray-600">Medical interventions</p>
         </div>
       </div>
 

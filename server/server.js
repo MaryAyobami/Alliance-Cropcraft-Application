@@ -981,25 +981,157 @@ app.get("/api/tasks", authenticateToken, async (req, res) => {
   })
 
 // Complete task with evidence upload
-app.post("/api/tasks/:id/complete-with-evidence", authenticateToken, async (req, res) => {
+app.post("/api/tasks/:id/complete-with-evidence", authenticateToken, upload.single("evidence"), async (req, res) => {
   try {
-      if (!req.file) return res.status(400).json({ message: "No image provided" })
+    const taskId = req.params.id
+    const { notes, completedAt } = req.body
+    const completionTime = completedAt || new Date().toISOString()
 
-    // Upload to Cloudinary using buffer
-    cloudinary.uploader.upload_stream(
-      { resource_type: "image", folder: "evidence" },
-      async (error, cloudRes) => {
-        if (error) return res.status(500).json({ message: "Cloudinary upload failed" })
-        // Save cloudRes.secure_url to DB
+    if (req.file) {
+      // Upload to Cloudinary using buffer
+      cloudinary.uploader.upload_stream(
+        { resource_type: "image", folder: "evidence" },
+        async (error, cloudRes) => {
+          if (error) {
+            console.error("Cloudinary upload error:", error)
+            return res.status(500).json({ message: "Image upload failed" })
+          }
+          
+          try {
+            // Update task with evidence and completion details
+            await pool.query(
+              "UPDATE tasks SET status = 'completed', evidence_photo = $1, completion_notes = $2, completed_at = $3 WHERE id = $4",
+              [cloudRes.secure_url, notes || null, completionTime, taskId]
+            )
+            res.json({ 
+              message: "Task completed with evidence", 
+              evidence_url: cloudRes.secure_url,
+              completed_at: completionTime
+            })
+          } catch (dbError) {
+            console.error("Database update error:", dbError)
+            res.status(500).json({ message: "Failed to update task status" })
+          }
+        }
+      ).end(req.file.buffer)
+    } else {
+      // Complete task without evidence photo
+      try {
         await pool.query(
-          "UPDATE tasks SET status='completed', evidence_photo=$1 WHERE id=$2",
-          [cloudRes.secure_url, req.params.id]
+          "UPDATE tasks SET status = 'completed', completion_notes = $1, completed_at = $2 WHERE id = $3",
+          [notes || null, completionTime, taskId]
         )
-        res.json({ message: "Task completed with evidence", url: cloudRes.secure_url })
+        res.json({ 
+          message: "Task completed successfully",
+          completed_at: completionTime
+        })
+      } catch (dbError) {
+        console.error("Database update error:", dbError)
+        res.status(500).json({ message: "Failed to update task status" })
       }
-    ).end(req.file.buffer)  
+    }
   } catch (error) {
+    console.error("Complete task error:", error)
     res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Send reminder for a task
+app.post("/api/tasks/:id/remind", authenticateToken, async (req, res) => {
+  try {
+    const taskId = req.params.id
+    const { assignedUserId } = req.body
+
+    // Get task and user details
+    const taskQuery = `
+      SELECT t.*, u.full_name as assigned_name, u.email as assigned_email,
+             c.full_name as created_by_name
+      FROM tasks t 
+      LEFT JOIN users u ON t.assigned_to = u.id 
+      LEFT JOIN users c ON t.created_by = c.id
+      WHERE t.id = $1
+    `
+    const taskResult = await pool.query(taskQuery, [taskId])
+    
+    if (taskResult.rows.length === 0) {
+      return res.status(404).json({ message: "Task not found" })
+    }
+
+    const task = taskResult.rows[0]
+    
+    if (!task.assigned_email) {
+      return res.status(400).json({ message: "No email found for assigned user" })
+    }
+
+    // Send reminder email
+    const reminderEmail = {
+      from: process.env.EMAIL_FROM || 'noreply@farmconnect.com',
+      to: task.assigned_email,
+      subject: `Reminder: Task "${task.title}" is pending`,
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; background-color: #f9f9f9;">
+          <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; text-align: center; color: white; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0; font-size: 24px;">Alliance CropCraft</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.9;">Task Reminder</p>
+          </div>
+          
+          <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h2 style="color: #374151; margin-bottom: 20px;">Hello ${task.assigned_name}!</h2>
+            
+            <p style="color: #6b7280; line-height: 1.6; margin-bottom: 20px;">
+              This is a friendly reminder about your pending task that requires your attention.
+            </p>
+            
+            <div style="background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%); padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+              <h4 style="margin: 0 0 10px 0; color: #92400e;">📋 ${task.title}</h4>
+              <p style="margin: 0; color: #92400e; font-size: 14px;">${task.description || 'No description provided'}</p>
+            </div>
+            
+            <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <div style="display: grid; gap: 10px;">
+                <div style="display: flex; justify-content: space-between;">
+                  <span style="color: #6b7280; font-weight: 500;">Due Date:</span>
+                  <span style="color: #374151;">${task.due_date || 'Not specified'}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span style="color: #6b7280; font-weight: 500;">Due Time:</span>
+                  <span style="color: #374151;">${task.due_time || 'Not specified'}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span style="color: #6b7280; font-weight: 500;">Priority:</span>
+                  <span style="color: ${task.priority === 'high' ? '#dc2626' : task.priority === 'medium' ? '#d97706' : '#059669'}; font-weight: bold;">${task.priority?.toUpperCase()}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <p style="color: #6b7280; margin-bottom: 20px;">Please complete this task at your earliest convenience.</p>
+            </div>
+            
+            <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
+              <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                This is an automated reminder from Alliance CropCraft.<br>
+                If you have any questions, please contact your farm manager.
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+              <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                Best regards,<br>
+                <strong style="color: #10b981;">${task.created_by_name || 'The Alliance CropCraft Team'}</strong>
+              </p>
+            </div>
+          </div>
+        </div>
+      `
+    }
+
+    await sendNotificationEmail(reminderEmail)
+    
+    res.json({ message: "Reminder sent successfully" })
+  } catch (error) {
+    console.error("Send reminder error:", error)
+    res.status(500).json({ message: "Failed to send reminder" })
   }
 })
 
@@ -1124,7 +1256,7 @@ app.get("/api/tasks/:id/details", authenticateToken, async (req, res) => {
       FROM tasks t 
       LEFT JOIN users u ON t.assigned_to = u.id 
       LEFT JOIN users c ON t.created_by = c.id
-      WHERE t.id = $1 AND (t.assigned_to = $2 OR $3 = 'Admin User' OR t.created_by = $2)
+      WHERE t.id = $1 AND (t.assigned_to = $2 OR $3 = 'Admin' OR $3 = 'Farm Manager' OR t.created_by = $2)
     `
     
     const result = await pool.query(query, [taskId, req.user.id, req.user.role])
@@ -1277,7 +1409,7 @@ app.get("/api/events", authenticateToken, async (req, res) => {
 
 app.post("/api/events", authenticateToken, async (req, res) => {
   try {
-    const { title, description, event_date, event_time, location, type, priority } = req.body
+    const { title, description, event_date, event_time, location, type, priority, participants } = req.body
     const created_by = req.user.id
 
     // Enhanced validation
@@ -1361,10 +1493,25 @@ app.post("/api/events", authenticateToken, async (req, res) => {
       }
     }
 
+    // Validate participant emails if provided
+    let participantEmails = []
+    if (participants && participants.trim()) {
+      participantEmails = participants.split(',').map(email => email.trim()).filter(email => email)
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      const invalidEmails = participantEmails.filter(email => !emailRegex.test(email))
+      
+      if (invalidEmails.length > 0) {
+        return res.status(400).json({ 
+          message: `Invalid email(s): ${invalidEmails.join(', ')}`,
+          field: "participants"
+        })
+      }
+    }
+
     const result = await queryWithRetry(
       `INSERT INTO events 
-       (title, description, event_date, event_time, location, type, priority, created_by, created_at) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING *`,
+       (title, description, event_date, event_time, location, type, priority, created_by, participants, created_at) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()) RETURNING *`,
       [
         title.trim(),
         description ? description.trim() : null,
@@ -1373,11 +1520,100 @@ app.post("/api/events", authenticateToken, async (req, res) => {
         location ? location.trim() : null,
         type || "Task",
         priority ? priority.toLowerCase() : "medium",
-        created_by
+        created_by,
+        participantEmails.length > 0 ? participantEmails.join(',') : null
       ],
     )
 
     const createdEvent = result.rows[0]
+
+    // Send invitations to participants
+    if (participantEmails.length > 0) {
+      try {
+        const createdByUser = await queryWithRetry("SELECT * FROM users WHERE id = $1", [created_by])
+        const creatorName = createdByUser.rows.length > 0 ? createdByUser.rows[0].full_name : 'Event Organizer'
+        
+        for (const email of participantEmails) {
+          const invitationEmail = {
+            from: process.env.EMAIL_FROM || 'noreply@farmconnect.com',
+            to: email,
+            subject: `Event Invitation: ${title}`,
+            html: `
+              <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; background-color: #f9f9f9;">
+                <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 30px; text-align: center; color: white; border-radius: 10px 10px 0 0;">
+                  <h1 style="margin: 0; font-size: 24px;">Alliance CropCraft</h1>
+                  <p style="margin: 10px 0 0 0; opacity: 0.9;">🎉 Event Invitation</p>
+                </div>
+                
+                <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                  <h2 style="color: #374151; margin-bottom: 20px;">You're Invited!</h2>
+                  
+                  <p style="color: #6b7280; line-height: 1.6; margin-bottom: 20px;">
+                    Hello! You have been invited to the following event by <strong style="color: #3b82f6;">${creatorName}</strong>:
+                  </p>
+                  
+                  <div style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6;">
+                    <h4 style="margin: 0 0 15px 0; color: #1e40af;">📅 ${title}</h4>
+                    ${description ? `<p style="margin: 0 0 15px 0; color: #1e40af; font-size: 14px;">${description}</p>` : ''}
+                  </div>
+                  
+                  <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <div style="display: grid; gap: 10px;">
+                      <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #6b7280; font-weight: 500;">📅 Date:</span>
+                        <span style="color: #374151;">${event_date}</span>
+                      </div>
+                      ${event_time ? `
+                      <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #6b7280; font-weight: 500;">⏰ Time:</span>
+                        <span style="color: #374151;">${event_time}</span>
+                      </div>` : ''}
+                      ${location ? `
+                      <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #6b7280; font-weight: 500;">📍 Location:</span>
+                        <span style="color: #374151;">${location}</span>
+                      </div>` : ''}
+                      <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #6b7280; font-weight: 500;">🏷️ Type:</span>
+                        <span style="color: #374151;">${type || 'Event'}</span>
+                      </div>
+                      <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #6b7280; font-weight: 500;">⭐ Priority:</span>
+                        <span style="color: ${priority === 'high' ? '#dc2626' : priority === 'medium' ? '#d97706' : '#059669'}; font-weight: bold;">${(priority || 'medium').toUpperCase()}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div style="text-align: center; margin: 30px 0;">
+                    <p style="color: #6b7280; margin-bottom: 20px;">This event has been added to your calendar. Please save the date!</p>
+                  </div>
+                  
+                  <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
+                    <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                      This invitation was sent from Alliance CropCraft.<br>
+                      If you have any questions about this event, please contact the organizer.
+                    </p>
+                  </div>
+                  
+                  <div style="text-align: center; margin-top: 20px;">
+                    <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                      Best regards,<br>
+                      <strong style="color: #10b981;">${creatorName}</strong><br>
+                      <span style="color: #9ca3af; font-size: 12px;">Alliance CropCraft Team</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            `
+          }
+          
+          await sendNotificationEmail(invitationEmail)
+        }
+      } catch (inviteError) {
+        console.error("Failed to send invitation emails:", inviteError)
+        // Don't fail event creation if invitation emails fail
+      }
+    }
 
     // Send notification about the new event if notification system is available
     if (notificationSystem) {
@@ -1421,7 +1657,38 @@ app.post("/api/events", authenticateToken, async (req, res) => {
 app.put("/api/events/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params
-    const { title, description, event_date, event_time, location, type, priority } = req.body
+    const { title, description, event_date, event_time, location, type, priority, participants } = req.body
+    const userId = req.user.id
+    const userRole = req.user.role
+
+    // Check if event exists and user has permission to edit
+    const eventCheck = await pool.query("SELECT * FROM events WHERE id = $1", [id])
+    if (eventCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Event not found" })
+    }
+
+    const event = eventCheck.rows[0]
+    // Only creator or admin/farm manager can edit
+    if (event.created_by !== userId && !["Admin", "Farm Manager"].includes(userRole)) {
+      return res.status(403).json({ message: "You don't have permission to edit this event" })
+    }
+
+    // Validate participant emails if provided
+    let participantEmails = []
+    if (participants !== undefined) {
+      if (participants && participants.trim()) {
+        participantEmails = participants.split(',').map(email => email.trim()).filter(email => email)
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        const invalidEmails = participantEmails.filter(email => !emailRegex.test(email))
+        
+        if (invalidEmails.length > 0) {
+          return res.status(400).json({ 
+            message: `Invalid email(s): ${invalidEmails.join(', ')}`,
+            field: "participants"
+          })
+        }
+      }
+    }
 
     const result = await pool.query(
       `UPDATE events SET 
@@ -1431,14 +1698,21 @@ app.put("/api/events/:id", authenticateToken, async (req, res) => {
         event_time = COALESCE($4, event_time),
         location = COALESCE($5, location),
         type = COALESCE($6, type),
-        priority = COALESCE($7, priority)
-      WHERE id = $8 RETURNING *`,
-      [title || null, description || null, event_date || null, event_time || null, location || null, type || null, priority || null, id]
+        priority = COALESCE($7, priority),
+        participants = COALESCE($8, participants)
+      WHERE id = $9 RETURNING *`,
+      [
+        title || null, 
+        description || null, 
+        event_date || null, 
+        event_time || null, 
+        location || null, 
+        type || null, 
+        priority || null, 
+        participants !== undefined ? (participantEmails.length > 0 ? participantEmails.join(',') : null) : undefined,
+        id
+      ]
     )
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Event not found" })
-    }
 
     res.json(result.rows[0])
   } catch (error) {
@@ -1451,8 +1725,22 @@ app.put("/api/events/:id", authenticateToken, async (req, res) => {
 app.delete("/api/events/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params
+    const userId = req.user.id
+    const userRole = req.user.role
+
+    // Check if event exists and user has permission to delete
+    const eventCheck = await pool.query("SELECT * FROM events WHERE id = $1", [id])
+    if (eventCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Event not found" })
+    }
+
+    const event = eventCheck.rows[0]
+    // Only creator or admin/farm manager can delete
+    if (event.created_by !== userId && !["Admin", "Farm Manager"].includes(userRole)) {
+      return res.status(403).json({ message: "You don't have permission to delete this event" })
+    }
+
     const result = await pool.query("DELETE FROM events WHERE id = $1 RETURNING id", [id])
-    if (result.rows.length === 0) return res.status(404).json({ message: "Event not found" })
     res.json({ success: true })
   } catch (error) {
     console.error("Delete event error:", error)
@@ -1561,6 +1849,188 @@ app.get("/api/reports/staff-performance", authenticateToken, requireAdmin, async
     res.json(result.rows)
   } catch (error) {
     console.error("Staff performance error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Get task distribution by type/category
+app.get("/api/reports/task-distribution", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { start, end } = req.query
+    let dateFilter = ""
+    let params = []
+    if (start && end) {
+      dateFilter = " WHERE created_at BETWEEN $1 AND $2 "
+      params = [start, end]
+    }
+
+    const result = await pool.query(
+      `SELECT 
+        COALESCE(tag, 'other') as category,
+        COUNT(*) as count,
+        ROUND((COUNT(*) * 100.0 / SUM(COUNT(*)) OVER()), 1) as percentage
+      FROM tasks ${dateFilter}
+      GROUP BY tag
+      ORDER BY count DESC`,
+      params
+    )
+
+    // If no data, return default structure
+    if (result.rows.length === 0) {
+      return res.json([
+        { category: 'feeding', count: 0, percentage: 0 },
+        { category: 'health', count: 0, percentage: 0 },
+        { category: 'maintenance', count: 0, percentage: 0 },
+        { category: 'cleaning', count: 0, percentage: 0 },
+        { category: 'other', count: 0, percentage: 0 }
+      ])
+    }
+
+    res.json(result.rows)
+  } catch (error) {
+    console.error("Task distribution error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Get AI insights based on real data
+app.get("/api/reports/insights", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const insights = []
+
+    // Performance insight based on completion rates
+    const performanceResult = await pool.query(`
+      SELECT 
+        u.full_name,
+        COUNT(t.id) as total_tasks,
+        COUNT(CASE WHEN t.status = 'completed' THEN 1 END) as completed_tasks,
+        ROUND(COUNT(CASE WHEN t.status = 'completed' THEN 1 END) * 100.0 / NULLIF(COUNT(t.id), 0), 1) as efficiency
+      FROM users u
+      LEFT JOIN tasks t ON u.id = t.assigned_to
+      WHERE u.role != 'Admin' AND t.created_at >= CURRENT_DATE - INTERVAL '7 days'
+      GROUP BY u.id, u.full_name
+      HAVING COUNT(t.id) > 0
+      ORDER BY efficiency DESC, completed_tasks DESC
+      LIMIT 1
+    `)
+
+    if (performanceResult.rows.length > 0) {
+      const topPerformer = performanceResult.rows[0]
+      insights.push({
+        type: 'performance',
+        category: 'Performance Highlight',
+        message: `${topPerformer.full_name} leads this week with ${topPerformer.efficiency}% efficiency, completing ${topPerformer.completed_tasks} out of ${topPerformer.total_tasks} tasks.`,
+        color: 'emerald'
+      })
+    }
+
+    // Task completion trend insight
+    const trendResult = await pool.query(`
+      SELECT 
+        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_this_week,
+        COUNT(CASE WHEN status = 'completed' AND created_at >= CURRENT_DATE - INTERVAL '14 days' AND created_at < CURRENT_DATE - INTERVAL '7 days' THEN 1 END) as completed_last_week
+      FROM tasks
+      WHERE created_at >= CURRENT_DATE - INTERVAL '14 days'
+    `)
+
+    if (trendResult.rows.length > 0) {
+      const trend = trendResult.rows[0]
+      const thisWeek = parseInt(trend.completed_this_week)
+      const lastWeek = parseInt(trend.completed_last_week)
+      
+      if (lastWeek > 0) {
+        const percentChange = ((thisWeek - lastWeek) / lastWeek * 100).toFixed(1)
+        const message = percentChange > 0 
+          ? `Task completion improved by ${percentChange}% this week with ${thisWeek} tasks completed.`
+          : `Task completion decreased by ${Math.abs(percentChange)}% this week. Consider reviewing task assignments.`
+        
+        insights.push({
+          type: 'trend',
+          category: percentChange > 0 ? 'Performance Highlight' : 'Attention Required',
+          message,
+          color: percentChange > 0 ? 'emerald' : 'orange'
+        })
+      }
+    }
+
+    // Overdue tasks insight
+    const overdueResult = await pool.query(`
+      SELECT COUNT(*) as overdue_count
+      FROM tasks
+      WHERE status != 'completed' AND due_date < CURRENT_DATE
+    `)
+
+    const overdueCount = parseInt(overdueResult.rows[0].overdue_count)
+    if (overdueCount > 0) {
+      insights.push({
+        type: 'overdue',
+        category: 'Attention Required',
+        message: `${overdueCount} task${overdueCount > 1 ? 's are' : ' is'} overdue and require${overdueCount === 1 ? 's' : ''} immediate attention.`,
+        color: 'orange'
+      })
+    }
+
+    // Time optimization insight based on completion patterns
+    const timeResult = await pool.query(`
+      SELECT 
+        EXTRACT(HOUR FROM created_at) as hour_created,
+        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_count,
+        COUNT(*) as total_count,
+        ROUND(COUNT(CASE WHEN status = 'completed' THEN 1 END) * 100.0 / COUNT(*), 1) as completion_rate
+      FROM tasks
+      WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
+      GROUP BY EXTRACT(HOUR FROM created_at)
+      HAVING COUNT(*) >= 5
+      ORDER BY completion_rate DESC
+      LIMIT 1
+    `)
+
+    if (timeResult.rows.length > 0) {
+      const bestTime = timeResult.rows[0]
+      const hour = parseInt(bestTime.hour_created)
+      const timeRange = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
+      
+      insights.push({
+        type: 'optimization',
+        category: 'Optimization Tip',
+        message: `Tasks created in the ${timeRange} (around ${hour}:00) show highest completion rates at ${bestTime.completion_rate}%. Consider scheduling important tasks during this time.`,
+        color: 'blue'
+      })
+    }
+
+    // If no insights generated, provide fallback
+    if (insights.length === 0) {
+      insights.push({
+        type: 'general',
+        category: 'System Status',
+        message: 'System is monitoring your farm operations. Complete more tasks to receive personalized insights.',
+        color: 'blue'
+      })
+    }
+
+    // Ensure we have exactly 3 insights
+    const defaultInsights = [
+      {
+        type: 'health',
+        category: 'Health Reminder',
+        message: 'Regular livestock health checks ensure optimal farm productivity and early disease detection.',
+        color: 'orange'
+      },
+      {
+        type: 'productivity',
+        category: 'Productivity Tip',
+        message: 'Consistent task completion builds momentum. Focus on completing smaller tasks first to build confidence.',
+        color: 'blue'
+      }
+    ]
+
+    while (insights.length < 3) {
+      insights.push(defaultInsights[insights.length - 1] || defaultInsights[0])
+    }
+
+    res.json(insights.slice(0, 3))
+  } catch (error) {
+    console.error("AI insights error:", error)
     res.status(500).json({ message: "Server error" })
   }
 })

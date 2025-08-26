@@ -20,6 +20,7 @@ const Calendar = () => {
     priority: "medium",
     reminder_minutes: 30,
     notify: true,
+    participants: ""
   })
   const [error, setError] = useState("")
   const [fieldErrors, setFieldErrors] = useState({})
@@ -98,6 +99,7 @@ const Calendar = () => {
         priority: "medium",
         reminder_minutes: 30,
         notify: true,
+        participants: ""
       })
       setError("")
       setFieldErrors({})

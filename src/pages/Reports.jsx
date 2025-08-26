@@ -34,6 +34,8 @@ const Reports = () => {
   const [stats, setStats] = useState(null)
   const [staffPerformance, setStaffPerformance] = useState([])
   const [taskTrends, setTaskTrends] = useState([])
+  const [taskDistribution, setTaskDistribution] = useState([])
+  const [insights, setInsights] = useState([])
   const [livestock, setLivestock] = useState([])
   const [livestockStats, setLivestockStats] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -54,13 +56,17 @@ const Reports = () => {
       }
 
       if (activeTab === 'tasks') {
-        const [statsResponse, staffResponse] = await Promise.all([
+        const [statsResponse, staffResponse, distributionResponse, insightsResponse] = await Promise.all([
           reportsAPI.getStats(params),
           reportsAPI.getStaffPerformance(params),
+          reportsAPI.getTaskDistribution(params),
+          reportsAPI.getInsights(params),
         ])
 
         setStats(statsResponse.data)
         setStaffPerformance(staffResponse.data)
+        setTaskDistribution(distributionResponse.data)
+        setInsights(insightsResponse.data)
         
         // Generate task trends based on real stats
         generateTaskTrends(statsResponse.data)
@@ -233,39 +239,56 @@ const Reports = () => {
     ],
   }
 
-  // Calculate real task distribution from stats data
-  const getTaskDistribution = () => {
-    // This would normally come from actual task data analysis
-    // For now, calculate based on available data or provide more realistic distribution
-    const totalTasks = stats?.totalTasks || 100
-    const feedingTasks = Math.round(totalTasks * 0.35) // 35%
-    const healthTasks = Math.round(totalTasks * 0.25)  // 25% 
-    const maintenanceTasks = Math.round(totalTasks * 0.20) // 20%
-    const cleaningTasks = Math.round(totalTasks * 0.15) // 15%
-    const otherTasks = totalTasks - (feedingTasks + healthTasks + maintenanceTasks + cleaningTasks)
-    
-    return [feedingTasks, healthTasks, maintenanceTasks, cleaningTasks, otherTasks]
+  // Get task distribution data from API
+  const getTaskDistributionData = () => {
+    if (!taskDistribution || taskDistribution.length === 0) {
+      return {
+        labels: ['No Data'],
+        data: [1],
+        backgroundColor: ['#e5e7eb'],
+        borderColor: ['#d1d5db']
+      }
+    }
+
+    // Map category names to display names
+    const categoryDisplayNames = {
+      'static': 'Daily Tasks',
+      'dynamic': 'Special Tasks', 
+      'feeding': 'Feeding',
+      'health': 'Health Checks',
+      'maintenance': 'Maintenance',
+      'cleaning': 'Cleaning',
+      'breeding': 'Breeding',
+      'vaccination': 'Vaccination',
+      'other': 'Other'
+    }
+
+    const colors = [
+      '#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444',
+      '#06b6d4', '#f97316', '#84cc16', '#ec4899', '#6366f1'
+    ]
+
+    const borderColors = [
+      '#16a34a', '#2563eb', '#d97706', '#7c3aed', '#dc2626',
+      '#0891b2', '#ea580c', '#65a30d', '#db2777', '#4f46e5'
+    ]
+
+    return {
+      labels: taskDistribution.map(item => categoryDisplayNames[item.category] || item.category),
+      data: taskDistribution.map(item => item.count),
+      backgroundColor: colors.slice(0, taskDistribution.length),
+      borderColor: borderColors.slice(0, taskDistribution.length)
+    }
   }
 
+  const distributionData = getTaskDistributionData()
   const taskDistributionData = {
-    labels: ['Feeding', 'Health Checks', 'Maintenance', 'Cleaning', 'Other'],
+    labels: distributionData.labels,
     datasets: [
       {
-        data: getTaskDistribution(),
-        backgroundColor: [
-          '#22c55e',
-          '#3b82f6',
-          '#f59e0b',
-          '#8b5cf6',
-          '#ef4444',
-        ],
-        borderColor: [
-          '#16a34a',
-          '#2563eb',
-          '#d97706',
-          '#7c3aed',
-          '#dc2626',
-        ],
+        data: distributionData.data,
+        backgroundColor: distributionData.backgroundColor,
+        borderColor: distributionData.borderColor,
         borderWidth: 2,
       },
     ],
@@ -551,39 +574,40 @@ const Reports = () => {
               <div className="w-10 h-10 farm-gradient rounded-xl flex items-center justify-center shadow-lg">
                 <Activity className="w-5 h-5 text-white" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">AI Insights & Recommendations</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Smart Insights & Recommendations</h3>
+              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Live Data</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="p-5 bg-gradient-to-br from-emerald-50 to-green-100 border border-emerald-200 rounded-xl">
-                <div className="flex items-center space-x-2 mb-3">
-                  <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
-                  <span className="font-semibold text-emerald-800">Performance Highlight</span>
-                </div>
-                <p className="text-sm text-gray-700">
-                  Task completion rate has improved by 5.2% this week. {staffPerformance[0]?.full_name || 'Top performer'} leads with {staffPerformance[0]?.efficiency || 96}% efficiency.
-                </p>
-              </div>
+              {insights.map((insight, index) => {
+                const colorClasses = {
+                  emerald: 'from-emerald-50 to-green-100 border-emerald-200',
+                  orange: 'from-orange-50 to-amber-100 border-orange-200',
+                  blue: 'from-blue-50 to-cyan-100 border-blue-200'
+                }
+                const dotColors = {
+                  emerald: 'bg-emerald-500',
+                  orange: 'bg-orange-500',
+                  blue: 'bg-blue-500'
+                }
+                const textColors = {
+                  emerald: 'text-emerald-800',
+                  orange: 'text-orange-800',
+                  blue: 'text-blue-800'
+                }
 
-              <div className="p-5 bg-gradient-to-br from-orange-50 to-amber-100 border border-orange-200 rounded-xl">
-                <div className="flex items-center space-x-2 mb-3">
-                  <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                  <span className="font-semibold text-orange-800">Attention Required</span>
-                </div>
-                <p className="text-sm text-gray-700">
-                  Livestock health checks are behind schedule. Consider reassigning veterinary tasks to optimize workflow.
-                </p>
-              </div>
-
-              <div className="p-5 bg-gradient-to-br from-blue-50 to-cyan-100 border border-blue-200 rounded-xl">
-                <div className="flex items-center space-x-2 mb-3">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                  <span className="font-semibold text-blue-800">Optimization Tip</span>
-                </div>
-                <p className="text-sm text-gray-700">
-                  Morning feeding tasks show highest completion rates. Schedule critical tasks for 6-9 AM for optimal results.
-                </p>
-              </div>
+                return (
+                  <div key={index} className={`p-5 bg-gradient-to-br ${colorClasses[insight.color]} border rounded-xl`}>
+                    <div className="flex items-center space-x-2 mb-3">
+                      <div className={`w-3 h-3 ${dotColors[insight.color]} rounded-full`}></div>
+                      <span className={`font-semibold ${textColors[insight.color]}`}>{insight.category}</span>
+                    </div>
+                    <p className="text-sm text-gray-700">
+                      {insight.message}
+                    </p>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </>

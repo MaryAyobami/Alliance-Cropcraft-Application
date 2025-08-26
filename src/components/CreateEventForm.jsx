@@ -9,7 +9,8 @@ const CreateEventForm = ({ onEventCreated, onCancel }) => {
     event_time: "",
     location: "",
     type: "meeting",
-    priority: "medium"
+    priority: "medium",
+    participants: ""
   })
 
   const [loading, setLoading] = useState(false)
@@ -40,6 +41,17 @@ const CreateEventForm = ({ onEventCreated, onCancel }) => {
     
     if (formData.description && formData.description.length > 500) {
       errors.description = "Description must be less than 500 characters"
+    }
+
+    // Validate participant emails
+    if (formData.participants) {
+      const emails = formData.participants.split(',').map(email => email.trim()).filter(email => email)
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      const invalidEmails = emails.filter(email => !emailRegex.test(email))
+      
+      if (invalidEmails.length > 0) {
+        errors.participants = `Invalid email(s): ${invalidEmails.join(', ')}`
+      }
     }
 
     setFieldErrors(errors)
@@ -85,7 +97,8 @@ const CreateEventForm = ({ onEventCreated, onCancel }) => {
         event_time: "",
         location: "",
         type: "meeting",
-        priority: "medium"
+        priority: "medium",
+        participants: ""
       })
       
       // Call parent callback if provided
@@ -188,6 +201,26 @@ const CreateEventForm = ({ onEventCreated, onCancel }) => {
             {formData.description.length}/500
           </p>
         </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Participant Emails
+        </label>
+        <input
+          type="text"
+          name="participants"
+          value={formData.participants}
+          onChange={handleChange}
+          className={getFieldClassName('participants')}
+          placeholder="Enter participant emails separated by commas (e.g., user1@email.com, user2@email.com)"
+        />
+        {fieldErrors.participants && (
+          <p className="text-red-500 text-xs mt-1">{fieldErrors.participants}</p>
+        )}
+        <p className="text-gray-500 text-xs mt-1">
+          Participants will receive email invitations and calendar sync notifications
+        </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -70,6 +70,8 @@ export const eventsAPI = {
 export const reportsAPI = {
   getStats: (params) => api.get("/reports/stats", { params }),
   getStaffPerformance: (params) => api.get("/reports/staff-performance", { params }),
+  getTaskDistribution: (params) => api.get("/reports/task-distribution", { params }),
+  getInsights: (params) => api.get("/reports/insights", { params }),
   exportReport: (params) => api.get("/reports/export", { params, responseType: "blob" }),
 }
 
