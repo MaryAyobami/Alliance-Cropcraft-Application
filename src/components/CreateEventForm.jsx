@@ -233,10 +233,7 @@ const CreateEventForm = ({ onEventCreated, onCancel }) => {
             className={getFieldClassName('type')}
           >
             <option value="meeting">Meeting</option>
-            <option value="training">Training</option>
-            <option value="maintenance">Maintenance</option>
-            <option value="harvest">Harvest</option>
-            <option value="other">Other</option>
+            <option value="event">Event</option>
           </select>
         </div>
 

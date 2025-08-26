@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef} from "react"
 import { useNavigate } from "react-router-dom"
 import { tasksAPI } from "../services/api"
-import { CheckCircle, Clock, Filter, Upload, Camera, X, Eye, FileText, Calendar, User, Edit, Trash2, Plus } from "lucide-react"
+import { CheckCircle, Clock, Filter, Upload, Camera, X, Eye, FileText, Calendar, User, Edit, Trash2, Plus, Users } from "lucide-react"
 import { useAuth } from "../contexts/AuthContext"
 import CreateTaskForm from "../components/CreateTaskForm"
 import EditTaskForm from "../components/EditTaskForm"
@@ -17,7 +17,6 @@ const Tasks = () => {
   const [weeklyTasks, setWeeklyTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState("all")
-  const [activeTab, setActiveTab] = useState("personal") // personal, staff, all
   const [showStaffOverview, setShowStaffOverview] = useState(false)
   const [showCreateTaskForm, setShowCreateTaskForm] = useState(false)
   const [showCompletionForm, setShowCompletionForm] = useState(false)
@@ -299,25 +298,7 @@ const Tasks = () => {
     return { personal, staff }
   }, [filteredTasks, user?.id, user?.role])
 
-  // Get the active task list based on current tab
-  const getActiveTaskList = () => {
-    if (!["Admin", "Farm Manager"].includes(user?.role)) {
-      return filteredTasks
-    }
-    
-    switch (activeTab) {
-      case "personal":
-        return categorizedTasks.personal
-      case "staff":
-        return categorizedTasks.staff
-      case "all":
-        return filteredTasks
-      default:
-        return categorizedTasks.personal
-    }
-  }
 
-  const activeTaskList = getActiveTaskList()
 
   // Send reminder function
   const handleSendReminder = async (taskId, assignedUserId) => {
@@ -389,64 +370,34 @@ const Tasks = () => {
           </div>
         </div>
 
-        {/* Task Category Tabs for Admin/Farm Manager */}
-        {["Admin", "Farm Manager"].includes(user?.role) && (
-          <div className="flex space-x-1 bg-gray-100 p-1 rounded-xl">
-            <button
-              onClick={() => setActiveTab("personal")}
-              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                activeTab === "personal"
-                  ? "bg-white text-primary-600 shadow-sm"
-                  : "text-gray-600 hover:text-gray-800"
-              }`}
-            >
-              Personal Tasks ({categorizedTasks.personal.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("staff")}
-              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                activeTab === "staff"
-                  ? "bg-white text-primary-600 shadow-sm"
-                  : "text-gray-600 hover:text-gray-800"
-              }`}
-            >
-              Staff Tasks ({categorizedTasks.staff.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("all")}
-              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                activeTab === "all"
-                  ? "bg-white text-primary-600 shadow-sm"
-                  : "text-gray-600 hover:text-gray-800"
-              }`}
-            >
-              All Tasks ({filteredTasks.length})
-            </button>
-          </div>
-        )}
       </div>
 
-        {/* Today's Tasks */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
-            {["Admin", "Farm Manager"].includes(user?.role) 
-              ? `${activeTab === "personal" ? "Personal" : activeTab === "staff" ? "Staff" : "Today's"} Tasks`
-              : "Today's Tasks"
-            }
-          </h2>
-          {activeTaskList.length > 6 && (
-            <button
-              onClick={() => setShowAllTasks(!showAllTasks)}
-              className="text-primary-600 hover:text-primary-700 text-sm font-medium"
-            >
-              {showAllTasks ? "Show Less" : `See More (${activeTaskList.length - 6})`}
-            </button>
-          )}
-        </div>
+      {/* Admin/Farm Manager Layout with Separate Sections */}
+      {["Admin", "Farm Manager"].includes(user?.role) ? (
+        <>
+          {/* Personal Tasks Section */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Personal Tasks</h2>
+              {categorizedTasks.personal.length > 6 && (
+                <button
+                  onClick={() => setShowAllTasks(!showAllTasks)}
+                  className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                >
+                  {showAllTasks ? "Show Less" : `See More (${categorizedTasks.personal.length - 6})`}
+                </button>
+              )}
+            </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
-          {(showAllTasks ? activeTaskList : activeTaskList.slice(0, 6)).map((task) => (
+            {categorizedTasks.personal.length === 0 ? (
+              <div className="text-center py-8 bg-gray-50 rounded-xl">
+                <CheckCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No personal tasks</h3>
+                <p className="text-gray-600">You don't have any tasks assigned to you at the moment.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
+                {(showAllTasks ? categorizedTasks.personal : categorizedTasks.personal.slice(0, 6)).map((task) => (
             <div 
               key={task.id || Math.random()} 
               className="card-enhanced cursor-pointer hover:shadow-lg transition-shadow duration-200"
@@ -585,7 +536,270 @@ const Tasks = () => {
             </div>
           ))}
         </div>
+      )}
+    </div>
+
+    {/* Staff Tasks Section */}
+    <div className="mb-8">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-gray-900">Staff Tasks</h2>
+        <button
+          onClick={() => setShowStaffOverview(true)}
+          className="px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 text-sm font-medium rounded-xl border border-blue-200 transition-all"
+        >
+          View Staff Overview
+        </button>
       </div>
+
+      {categorizedTasks.staff.length === 0 ? (
+        <div className="text-center py-8 bg-gray-50 rounded-xl">
+          <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No staff tasks</h3>
+          <p className="text-gray-600">No tasks have been assigned to staff members.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {categorizedTasks.staff.slice(0, 6).map((task) => (
+            <div 
+              key={task.id || Math.random()} 
+              className="card-enhanced cursor-pointer hover:shadow-lg transition-shadow duration-200"
+              onClick={() => navigate(`/task-details/${task.id}`)}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${task.status === "completed" ? "bg-green-100" : "bg-blue-100"}`}>
+                    {task.status === "completed" ? (
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    ) : (
+                      <Clock className="w-5 h-5 text-blue-600" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className={`text-lg font-semibold ${task.status === "completed" ? "line-through text-gray-500" : "text-gray-900"}`}>
+                      {task.title}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${getPriorityColor(task.priority)}`}>
+                        {task.priority}
+                      </span>
+                      <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
+                        {task.tag === "static" ? "Daily" : "One-time"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {task.description && (
+                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{task.description}</p>
+              )}
+
+              <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="w-4 h-4 text-gray-500" />
+                    <span className="text-gray-700 font-medium">Due: {task.due_time}</span>
+                  </div>
+                  {task.assigned_name && (
+                    <div className="flex items-center space-x-2">
+                      <User className="w-4 h-4 text-gray-500" />
+                      <span className="text-gray-700">{task.assigned_name}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-center space-x-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/task-details/${task.id}`);
+                  }}
+                  className="px-3 py-1.5 bg-blue-50 text-blue-600 hover:text-blue-700 hover:bg-blue-100 text-sm font-medium flex items-center space-x-1 transition-all duration-200 rounded-md border border-blue-200"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span>View</span>
+                </button>
+                {task.status !== 'completed' && task.assigned_to && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSendReminder(task.id, task.assigned_to);
+                    }}
+                    className="px-3 py-1.5 bg-orange-50 text-orange-600 hover:text-orange-700 hover:bg-orange-100 text-sm font-medium flex items-center space-x-1 transition-all duration-200 rounded-md border border-orange-200"
+                  >
+                    <User className="w-4 h-4" />
+                    <span>Remind</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </>
+) : (
+  /* Regular User Layout */
+  <div className="mb-8">
+    <div className="flex items-center justify-between mb-4">
+      <h2 className="text-lg font-semibold text-gray-900">Today's Tasks</h2>
+      {filteredTasks.length > 6 && (
+        <button
+          onClick={() => setShowAllTasks(!showAllTasks)}
+          className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+        >
+          {showAllTasks ? "Show Less" : `See More (${filteredTasks.length - 6})`}
+        </button>
+      )}
+    </div>
+
+    {filteredTasks.length === 0 ? (
+      <div className="text-center py-12 bg-gray-50 rounded-xl">
+        <CheckCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">No tasks found</h3>
+        <p className="text-gray-600">{filter === "all" ? "No tasks available." : `No ${filter} tasks found.`}</p>
+      </div>
+    ) : (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
+        {(showAllTasks ? filteredTasks : filteredTasks.slice(0, 6)).map((task) => (
+          <div 
+            key={task.id || Math.random()} 
+            className="card-enhanced cursor-pointer hover:shadow-lg transition-shadow duration-200"
+            onClick={() => navigate(`/task-details/${task.id}`)}
+          >
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${task.status === "completed" ? "bg-green-100" : "bg-blue-100"}`}>
+                  {task.status === "completed" ? (
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  ) : (
+                    <Clock className="w-5 h-5 text-blue-600" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h3 className={`text-lg font-semibold ${task.status === "completed" ? "line-through text-gray-500" : "text-gray-900"}`}>
+                    {task.title}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${getPriorityColor(task.priority)}`}>
+                      {task.priority}
+                    </span>
+                    <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
+                      {task.tag === "static" ? "Daily" : "One-time"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {task.status === "completed" && task.evidence_photo && (
+                <div className="text-right">
+                  <span className="text-xs text-gray-500">Evidence</span>
+                  <div className="flex items-center space-x-1 mt-1">
+                    <Camera className="w-4 h-4 text-green-500" />
+                    <span className="text-xs text-green-600">Uploaded</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {task.description && (
+              <p className="text-gray-600 text-sm mb-4 line-clamp-2">{task.description}</p>
+            )}
+
+            <div className="bg-gray-50 rounded-lg p-3 mb-4">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2">
+                  <Calendar className="w-4 h-4 text-gray-500" />
+                  <span className="text-gray-700 font-medium">Due: {task.due_time}</span>
+                </div>
+                {task.assigned_to_name && (
+                  <div className="flex items-center space-x-2">
+                    <User className="w-4 h-4 text-gray-500" />
+                    <span className="text-gray-700">{task.assigned_to_name}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {task.status === "completed" ? (
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-green-600 font-medium">
+                  ✅ Completed {task.completed_at ? new Date(task.completed_at).toLocaleString() : 'Recently'}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCompletedTaskClick(task);
+                    }}
+                    className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center space-x-1 transition-colors"
+                  >
+                    <Eye className="w-4 h-4" />
+                    <span>View Details</span>
+                  </button>
+                  {canDelete && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteTask(task.id);
+                      }}
+                      className="px-2 py-1 text-red-600 hover:text-red-700 hover:bg-red-50 text-sm font-medium flex items-center space-x-1 transition-all duration-200 rounded-md"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Delete</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col space-y-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleMarkCompleteClick(task);
+                  }}
+                  className="btn-primary text-sm flex items-center space-x-2 w-full justify-center"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Mark Complete</span>
+                </button>
+                {(canUpdate || canDelete) && (
+                  <div className="flex justify-center space-x-2">
+                    {canUpdate && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditTask(task);
+                        }}
+                        className="px-3 py-1.5 bg-blue-50 text-blue-600 hover:text-blue-700 hover:bg-blue-100 text-sm font-medium flex items-center space-x-1 transition-all duration-200 rounded-md border border-blue-200"
+                      >
+                        <Edit className="w-4 h-4" />
+                        <span>Edit</span>
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteTask(task.id);
+                        }}
+                        className="px-3 py-1.5 bg-red-50 text-red-600 hover:text-red-700 hover:bg-red-100 text-sm font-medium flex items-center space-x-1 transition-all duration-200 rounded-md border border-red-200"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span>Delete</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+)}
 
       {/* Weekly Task History */}
       {weeklyTasks.length > 0 && (
