@@ -635,13 +635,10 @@ app.get("/api/dashboard/stats", authenticateToken, async (req, res) => {
     let todayTasksQuery
     let todayTasksParams
 
-    if (userRole === "Admin User") {
-      todayTasksQuery = "SELECT * FROM tasks WHERE due_date = CURRENT_DATE"
-      todayTasksParams = []
-    } else {
-      todayTasksQuery = "SELECT * FROM tasks WHERE assigned_to = $1 AND due_date = CURRENT_DATE"
-      todayTasksParams = [userId]
-    }
+    
+    todayTasksQuery = "SELECT * FROM tasks WHERE assigned_to = $1 AND due_date = CURRENT_DATE"
+    todayTasksParams = [userId]
+    
 
     const todayTasksResult = await pool.query(todayTasksQuery, todayTasksParams)
     const todayTasks = todayTasksResult.rows
@@ -654,22 +651,14 @@ app.get("/api/dashboard/stats", authenticateToken, async (req, res) => {
     let weekTasksQuery
     let weekTasksParams
 
-    if (userRole === "Admin User") {
-      weekTasksQuery = `
-        SELECT COUNT(*) as count FROM tasks 
-        WHERE due_date >= DATE_TRUNC('week', CURRENT_DATE) 
-        AND due_date < DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '7 days'
-      `
-      weekTasksParams = []
-    } else {
-      weekTasksQuery = `
+    weekTasksQuery = `
         SELECT COUNT(*) as count FROM tasks 
         WHERE assigned_to = $1 
         AND due_date >= DATE_TRUNC('week', CURRENT_DATE) 
         AND due_date < DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '7 days'
       `
-      weekTasksParams = [userId]
-    }
+    weekTasksParams = [userId]
+    
 
     const weekTasksResult = await pool.query(weekTasksQuery, weekTasksParams)
     const thisWeekTasks = Number.parseInt(weekTasksResult.rows[0].count)
@@ -702,7 +691,7 @@ app.get("/api/dashboard/tasks", authenticateToken, async (req, res) => {
     let query
     let params
 
-    if (["Admin", "Farm Manager", "Admin User"].includes(userRole)) {
+    if (["Admin", "Farm Manager"].includes(userRole)) {
       query = `
         SELECT t.*, u.full_name as assigned_name, c.full_name as created_by_name
         FROM tasks t 
