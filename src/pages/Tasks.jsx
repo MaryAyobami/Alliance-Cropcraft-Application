@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef} from "react"
+import React, { useState, useEffect, useRef} from "react"
 import { useNavigate } from "react-router-dom"
 import { tasksAPI } from "../services/api"
 import { CheckCircle, Clock, Filter, Upload, Camera, X, Eye, FileText, Calendar, User, Edit, Trash2, Plus } from "lucide-react"
@@ -17,6 +17,8 @@ const Tasks = () => {
   const [weeklyTasks, setWeeklyTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState("all")
+  const [activeTab, setActiveTab] = useState("personal") // personal, staff, all
+  const [showStaffOverview, setShowStaffOverview] = useState(false)
   const [showCreateTaskForm, setShowCreateTaskForm] = useState(false)
   const [showCompletionForm, setShowCompletionForm] = useState(false)
   const [showTaskDetails, setShowTaskDetails] = useState(false)
@@ -279,6 +281,62 @@ const Tasks = () => {
     
     return matches
   })
+
+  // Categorize tasks for admin/farm manager view
+  const categorizedTasks = React.useMemo(() => {
+    if (!["Admin", "Farm Manager"].includes(user?.role)) {
+      return { personal: filteredTasks, staff: [] }
+    }
+
+    const personal = filteredTasks.filter(task => 
+      task.assigned_to === user?.id || task.created_by === user?.id
+    )
+    
+    const staff = filteredTasks.filter(task => 
+      task.assigned_to !== user?.id && task.created_by !== user?.id
+    )
+
+    return { personal, staff }
+  }, [filteredTasks, user?.id, user?.role])
+
+  // Get the active task list based on current tab
+  const getActiveTaskList = () => {
+    if (!["Admin", "Farm Manager"].includes(user?.role)) {
+      return filteredTasks
+    }
+    
+    switch (activeTab) {
+      case "personal":
+        return categorizedTasks.personal
+      case "staff":
+        return categorizedTasks.staff
+      case "all":
+        return filteredTasks
+      default:
+        return categorizedTasks.personal
+    }
+  }
+
+  const activeTaskList = getActiveTaskList()
+
+  // Send reminder function
+  const handleSendReminder = async (taskId, assignedUserId) => {
+    try {
+      // Call API to send reminder
+      await fetch(`/api/tasks/${taskId}/remind`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ assignedUserId })
+      })
+      alert('Reminder sent successfully!')
+    } catch (error) {
+      console.error('Failed to send reminder:', error)
+      alert('Failed to send reminder. Please try again.')
+    }
+  }
   
 
 
@@ -293,52 +351,107 @@ const Tasks = () => {
   return (
     <div className="space-y-6 max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Task Management</h1>
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Task Management</h1>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-gray-500" />
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="all">All Tasks</option>
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+            {["Admin", "Farm Manager"].includes(user?.role) && (
+              <button
+                className="px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 text-sm font-medium rounded-xl border border-blue-200 transition-all"
+                onClick={() => setShowStaffOverview(true)}
+              >
+                Staff Overview
+              </button>
+            )}
+            {canCreate && (
+              <button
+                className="btn-primary text-sm"
+                onClick={() => setShowCreateTaskForm(true)}
+              >
+                Create Task
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-500" />
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            >
-              <option value="all">All Tasks</option>
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-            </select>
-          </div>
-          {canCreate && (
+        {/* Task Category Tabs for Admin/Farm Manager */}
+        {["Admin", "Farm Manager"].includes(user?.role) && (
+          <div className="flex space-x-1 bg-gray-100 p-1 rounded-xl">
             <button
-              className="btn-primary text-sm"
-              onClick={() => setShowCreateTaskForm(true)}
+              onClick={() => setActiveTab("personal")}
+              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                activeTab === "personal"
+                  ? "bg-white text-primary-600 shadow-sm"
+                  : "text-gray-600 hover:text-gray-800"
+              }`}
             >
-              Create Task
+              Personal Tasks ({categorizedTasks.personal.length})
             </button>
-          )}
-        </div>
+            <button
+              onClick={() => setActiveTab("staff")}
+              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                activeTab === "staff"
+                  ? "bg-white text-primary-600 shadow-sm"
+                  : "text-gray-600 hover:text-gray-800"
+              }`}
+            >
+              Staff Tasks ({categorizedTasks.staff.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("all")}
+              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                activeTab === "all"
+                  ? "bg-white text-primary-600 shadow-sm"
+                  : "text-gray-600 hover:text-gray-800"
+              }`}
+            >
+              All Tasks ({filteredTasks.length})
+            </button>
+          </div>
+        )}
       </div>
 
         {/* Today's Tasks */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Today's Tasks</h2>
-          {filteredTasks.length > 6 && (
+          <h2 className="text-lg font-semibold text-gray-900">
+            {["Admin", "Farm Manager"].includes(user?.role) 
+              ? `${activeTab === "personal" ? "Personal" : activeTab === "staff" ? "Staff" : "Today's"} Tasks`
+              : "Today's Tasks"
+            }
+          </h2>
+          {activeTaskList.length > 6 && (
             <button
               onClick={() => setShowAllTasks(!showAllTasks)}
               className="text-primary-600 hover:text-primary-700 text-sm font-medium"
             >
-              {showAllTasks ? "Show Less" : `See More (${filteredTasks.length - 6})`}
+              {showAllTasks ? "Show Less" : `See More (${activeTaskList.length - 6})`}
             </button>
           )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
-          {(showAllTasks ? filteredTasks : filteredTasks.slice(0, 6)).map((task) => (
-            <div key={task.id || Math.random()} className="card-enhanced">
+          {(showAllTasks ? activeTaskList : activeTaskList.slice(0, 6)).map((task) => (
+            <div 
+              key={task.id || Math.random()} 
+              className="card-enhanced cursor-pointer hover:shadow-lg transition-shadow duration-200"
+              onClick={() => navigate(`/task-details/${task.id}`)}
+            >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${task.status === "completed" ? "bg-green-100" : "bg-blue-100"}`}>
@@ -404,26 +517,36 @@ const Tasks = () => {
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
-                      onClick={() => handleCompletedTaskClick(task)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCompletedTaskClick(task);
+                      }}
                       className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center space-x-1 transition-colors"
                     >
                       <Eye className="w-4 h-4" />
                       <span>View Details</span>
                     </button>
-                    {canDelete && (
-                      <button
-                        onClick={() => handleDeleteTask(task.id)}
-                        className="text-red-600 hover:text-red-700 text-sm font-medium flex items-center space-x-1 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+                                          {canDelete && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTask(task.id);
+                          }}
+                          className="px-2 py-1 text-red-600 hover:text-red-700 hover:bg-red-50 text-sm font-medium flex items-center space-x-1 transition-all duration-200 rounded-md"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          <span>Delete</span>
+                        </button>
+                      )}
                   </div>
                 </div>
               ) : (
                 <div className="flex flex-col space-y-2">
                   <button
-                    onClick={() => handleMarkCompleteClick(task)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMarkCompleteClick(task);
+                    }}
                     className="btn-primary text-sm flex items-center space-x-2 w-full justify-center"
                   >
                     <CheckCircle className="w-4 h-4" />
@@ -433,8 +556,11 @@ const Tasks = () => {
                     <div className="flex justify-center space-x-2">
                       {canUpdate && (
                         <button
-                          onClick={() => handleEditTask(task)}
-                          className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center space-x-1 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditTask(task);
+                          }}
+                          className="px-3 py-1.5 bg-blue-50 text-blue-600 hover:text-blue-700 hover:bg-blue-100 text-sm font-medium flex items-center space-x-1 transition-all duration-200 rounded-md border border-blue-200"
                         >
                           <Edit className="w-4 h-4" />
                           <span>Edit</span>
@@ -442,8 +568,11 @@ const Tasks = () => {
                       )}
                       {canDelete && (
                         <button
-                          onClick={() => handleDeleteTask(task.id)}
-                          className="text-red-600 hover:text-red-700 text-sm font-medium flex items-center space-x-1 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTask(task.id);
+                          }}
+                          className="px-3 py-1.5 bg-red-50 text-red-600 hover:text-red-700 hover:bg-red-100 text-sm font-medium flex items-center space-x-1 transition-all duration-200 rounded-md border border-red-200"
                         >
                           <Trash2 className="w-4 h-4" />
                           <span>Delete</span>
@@ -475,7 +604,11 @@ const Tasks = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {(showAllWeeklyTasks ? weeklyTasks : weeklyTasks.slice(0, 6)).map((task) => (
-              <div key={task.id || Math.random()} className="card-enhanced">
+              <div 
+                key={task.id || Math.random()} 
+                className="card-enhanced cursor-pointer hover:shadow-lg transition-shadow duration-200"
+                onClick={() => navigate(`/task-details/${task.id}`)}
+              >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-3">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${task.status === "completed" ? "bg-green-100" : "bg-blue-100"}`}>
@@ -526,7 +659,10 @@ const Tasks = () => {
 
                 <div className="flex justify-center mt-4">
                   <button
-                    onClick={() => handleCompletedTaskClick(task)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCompletedTaskClick(task);
+                    }}
                     className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center space-x-1 transition-colors"
                   >
                     <Eye className="w-4 h-4" />
@@ -542,102 +678,164 @@ const Tasks = () => {
       {/* Completion Form Modal */}
       {showCompletionForm && selectedTask && (
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl relative max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <div className="p-6">
+              {/* Header */}
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Complete Task</h3>
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Complete Task</h3>
+                    <p className="text-sm text-gray-500">Add evidence and notes</p>
+                  </div>
+                </div>
                 <button
                   onClick={closeCompletionForm}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
                 >
                   <X className="w-6 h-6" />
                 </button>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">{selectedTask.title}</h4>
-                  <p className="text-sm text-gray-600">{selectedTask.description}</p>
+              {/* Task Info */}
+              <div className="bg-blue-50 rounded-xl p-4 mb-6">
+                <h4 className="font-semibold text-gray-900 mb-2">{selectedTask.title}</h4>
+                <p className="text-sm text-gray-600 mb-3">{selectedTask.description}</p>
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <div className="flex items-center space-x-1">
+                    <Calendar className="w-3 h-3" />
+                    <span>Due: {selectedTask.due_time}</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Clock className="w-3 h-3" />
+                    <span>Completing: {new Date().toLocaleString()}</span>
+                  </div>
                 </div>
+              </div>
 
-                {/* Photo Upload */}
+              <div className="space-y-6">
+                {/* Photo Upload Section */}
                 <div>
-                  <input type="file" accept="image/*" onChange={handlePhotoUpload} />
-                      <button type="button" onClick={handleOpenCamera}>Take Photo</button>
-                      {showCamera && (
-                        <div>
-                          <video ref={videoRef} autoPlay />
-                          <button type="button" onClick={handleTakePhoto}>Capture</button>
-                        </div>
-                      )}
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Upload Photo Evidence
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    <Camera className="w-4 h-4 inline mr-2" />
+                    Photo Evidence
                   </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-primary-400 transition-colors">
+                  
+                  {showCamera && (
+                    <div className="mb-4 p-4 bg-gray-100 rounded-xl">
+                      <video ref={videoRef} autoPlay className="w-full rounded-lg mb-3" />
+                      <div className="flex space-x-2">
+                        <button 
+                          type="button" 
+                          onClick={handleTakePhoto}
+                          className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          📸 Capture
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            setShowCamera(false);
+                            if (cameraStream) {
+                              cameraStream.getTracks().forEach(track => track.stop());
+                            }
+                          }}
+                          className="px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-primary-400 transition-colors">
                     {completionData.photoPreview ? (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <img 
                           src={completionData.photoPreview} 
                           alt="Preview" 
-                          className="max-w-full h-32 object-cover rounded-lg mx-auto"
+                          className="max-w-full h-40 object-cover rounded-xl mx-auto shadow-md"
                         />
-                        <button
-                          onClick={() => {
-                            URL.revokeObjectURL(completionData.photoPreview)
-                            setCompletionData(prev => ({ ...prev, photo: null, photoPreview: null }))
-                          }}
-                          className="text-red-500 text-sm"
-                        >
-                          Remove Photo
-                        </button>
+                        <div className="flex space-x-2 justify-center">
+                          <button
+                            onClick={() => {
+                              URL.revokeObjectURL(completionData.photoPreview)
+                              setCompletionData(prev => ({ ...prev, photo: null, photoPreview: null }))
+                            }}
+                            className="px-3 py-1 text-red-600 bg-red-50 rounded-lg text-sm hover:bg-red-100 transition-colors"
+                          >
+                            🗑️ Remove
+                          </button>
+                          <label className="px-3 py-1 text-blue-600 bg-blue-50 rounded-lg text-sm hover:bg-blue-100 transition-colors cursor-pointer">
+                            🔄 Replace
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handlePhotoUpload}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
                       </div>
                     ) : (
-                      <label className="cursor-pointer">
-                        <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-600 mb-1">Click to upload photo</p>
+                      <div>
+                        <div className="flex justify-center space-x-4 mb-4">
+                          <label className="flex flex-col items-center cursor-pointer p-3 rounded-xl border-2 border-transparent hover:border-blue-200 hover:bg-blue-50 transition-all">
+                            <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                            <span className="text-sm font-medium text-gray-600">Upload File</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handlePhotoUpload}
+                              className="hidden"
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={handleOpenCamera}
+                            className="flex flex-col items-center p-3 rounded-xl border-2 border-transparent hover:border-green-200 hover:bg-green-50 transition-all"
+                          >
+                            <Camera className="w-8 h-8 text-gray-400 mb-2" />
+                            <span className="text-sm font-medium text-gray-600">Take Photo</span>
+                          </button>
+                        </div>
                         <p className="text-xs text-gray-500">PNG, JPG up to 10MB</p>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handlePhotoUpload}
-                          className="hidden"
-                        />
-                      </label>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                {/* Notes */}
+                {/* Notes Section */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Additional Notes (Optional)
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    <FileText className="w-4 h-4 inline mr-2" />
+                    Completion Notes (Optional)
                   </label>
                   <textarea
                     value={completionData.notes}
                     onChange={(e) => setCompletionData(prev => ({ ...prev, notes: e.target.value }))}
-                    placeholder="Add any additional notes about task completion..."
-                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
-                    rows="3"
+                    placeholder="Describe what was completed, any issues encountered, or additional details..."
+                    className="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none transition-all"
+                    rows="4"
                   />
-                </div>
-
-                <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
-                  📅 Completion time will be automatically recorded: {new Date().toLocaleString()}
                 </div>
               </div>
 
-              <div className="flex space-x-3 mt-6">
+              {/* Action Buttons */}
+              <div className="flex space-x-3 mt-8">
                 <button
                   onClick={closeCompletionForm}
-                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+                  className="flex-1 px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSubmitCompletion}
-                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 transition-all font-medium shadow-md hover:shadow-lg"
                 >
-                  Complete Task
+                  ✅ Complete Task
                 </button>
               </div>
             </div>
@@ -760,6 +958,120 @@ const Tasks = () => {
           <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No tasks found</h3>
           <p className="text-gray-600">{filter === "all" ? "No tasks available." : `No ${filter} tasks found.`}</p>
+        </div>
+      )}
+
+      {/* Staff Overview Modal */}
+      {showStaffOverview && ["Admin", "Farm Manager"].includes(user?.role) && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-6xl shadow-2xl relative max-h-[90vh] overflow-hidden">
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                    <User className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Staff Tasks Overview</h3>
+                    <p className="text-sm text-gray-500">Monitor and manage all staff assignments</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowStaffOverview(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* Staff Tasks Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="text-left p-3 font-medium text-gray-700 border-b">Task</th>
+                      <th className="text-left p-3 font-medium text-gray-700 border-b">Assigned To</th>
+                      <th className="text-left p-3 font-medium text-gray-700 border-b">Due Date</th>
+                      <th className="text-left p-3 font-medium text-gray-700 border-b">Due Time</th>
+                      <th className="text-left p-3 font-medium text-gray-700 border-b">Status</th>
+                      <th className="text-left p-3 font-medium text-gray-700 border-b">Priority</th>
+                      <th className="text-left p-3 font-medium text-gray-700 border-b">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tasks.filter(task => task.assigned_to !== user?.id).map((task) => (
+                      <tr key={task.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="p-3 border-b">
+                          <div>
+                            <div className="font-medium text-gray-900">{task.title}</div>
+                            {task.description && (
+                              <div className="text-sm text-gray-600 line-clamp-1">{task.description}</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-3 border-b">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-xs font-medium text-blue-600">
+                                {task.assigned_name ? task.assigned_name.split(' ').map(n => n[0]).join('') : 'UN'}
+                              </span>
+                            </div>
+                            <span className="text-sm text-gray-700">{task.assigned_name || 'Unassigned'}</span>
+                          </div>
+                        </td>
+                        <td className="p-3 border-b">
+                          <span className="text-sm text-gray-600">{task.due_date || 'Not set'}</span>
+                        </td>
+                        <td className="p-3 border-b">
+                          <span className="text-sm text-gray-600">{task.due_time || 'Not set'}</span>
+                        </td>
+                        <td className="p-3 border-b">
+                          <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
+                            task.status === 'completed' 
+                              ? 'bg-green-100 text-green-800' 
+                              : task.status === 'pending'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {task.status}
+                          </span>
+                        </td>
+                        <td className="p-3 border-b">
+                          <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(task.priority)}`}>
+                            {task.priority}
+                          </span>
+                        </td>
+                        <td className="p-3 border-b">
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => navigate(`/task-details/${task.id}`)}
+                              className="px-2 py-1 text-blue-600 hover:bg-blue-50 text-xs font-medium rounded transition-all"
+                            >
+                              View
+                            </button>
+                            {task.status !== 'completed' && task.assigned_to && (
+                              <button
+                                onClick={() => handleSendReminder(task.id, task.assigned_to)}
+                                className="px-2 py-1 text-orange-600 hover:bg-orange-50 text-xs font-medium rounded transition-all"
+                              >
+                                Remind
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {tasks.filter(task => task.assigned_to !== user?.id).length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    No staff tasks found
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
