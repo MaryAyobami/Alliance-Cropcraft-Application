@@ -139,7 +139,7 @@ class SimpleNotifications {
                                             `).join('')}
                                         </div>
                                         <div style="text-align:center;margin:30px 0;">
-                                            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/tasks" 
+                                            <a href="${process.env.FRONTEND_URL || 'https://alliancecropcraft.vercel.app'}/tasks" 
                                                  style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:white;padding:15px 30px;text-decoration:none;border-radius:8px;font-weight:bold;display:inline-block;box-shadow:0 4px 6px rgba(16,185,129,0.3);">
                                                 View Tasks
                                             </a>
@@ -287,7 +287,7 @@ class SimpleNotifications {
 
     // Send verification email
     static async sendVerificationEmail(user, token) {
-        const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${token}`;
+    const verificationUrl = `${process.env.FRONTEND_URL || 'https://alliancecropcraft.vercel.app'}/verify-email?token=${token}`;
         
         const mailOptions = {
             from: 'ogunmolamaryayobami@gmail.com',
@@ -357,7 +357,7 @@ class SimpleNotifications {
 
     // Send password reset email
     static async sendPasswordResetEmail(user, resetToken) {
-        const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${resetToken}`;
+    const resetUrl = `${process.env.FRONTEND_URL || 'https://alliancecropcraft.vercel.app'}/reset-password/${resetToken}`;
         const mailOptions = {
             from: process.env.EMAIL_USER || 'ogunmolamaryayobami@gmail.com',
             to: user.email,
@@ -441,7 +441,7 @@ class SimpleNotifications {
                                             Priority: ${task.priority || 'Normal'}
                                         </p>
                                         <div style='text-align:center;margin:30px 0;'>
-                                            <a href='${process.env.FRONTEND_URL || 'http://localhost:5173'}/tasks' 
+                                            <a href='${process.env.FRONTEND_URL || 'https://alliancecropcraft.vercel.app'}/tasks' 
                                                  style='background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:white;padding:15px 30px;text-decoration:none;border-radius:8px;font-weight:bold;display:inline-block;box-shadow:0 4px 6px rgba(16,185,129,0.3);'>
                                                 View Task Details
                                             </a>
@@ -523,7 +523,7 @@ class SimpleNotifications {
                                 </div>
                                 
                                 <div style="text-align: center; margin: 30px 0;">
-                                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/calendar" 
+                                    <a href="${process.env.FRONTEND_URL || 'https://alliancecropcraft.vercel.app'}/calendar" 
                                        style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); 
                                               color: white; 
                                               padding: 15px 30px; 
