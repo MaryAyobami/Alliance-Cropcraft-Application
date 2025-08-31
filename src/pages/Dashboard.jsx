@@ -190,7 +190,7 @@ const Dashboard = () => {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-0">
             {/* Welcome Section */}
             <div className="flex-1">
-              <h1 className="text-2xl sm:text-2xl lg:text-4xl font-bold mb-2">
+              <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold mb-2">
                 {getGreeting()}, {user?.full_name}!
               </h1>
               <p className="text-white text-base sm:text-md mb-4">

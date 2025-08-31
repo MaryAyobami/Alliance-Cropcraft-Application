@@ -166,7 +166,7 @@ const Register = () => {
           <div className="max-w-lg animate-slide-up">
             <div className="mb-6">
               <div className="w-16 h-1 bg-primary-700 mb-4 animate-expand"></div>
-              <h1 className="text-3xl lg:text-5xl font-bold mb-3 leading-tight">
+              <h1 className="text-xl sm:text-3xl lg:text-5xl font-bold mb-3 leading-tight">
                 Create an Account
               </h1>
             </div>

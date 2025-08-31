@@ -169,7 +169,7 @@ const TaskHistory = () => {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Task History</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Task History</h1>
             <p className="text-gray-600 mt-2">
               {week === "current" ? "This Week" : week} • {filteredTasks.length} of {tasks.length} tasks shown
             </p>

@@ -141,7 +141,7 @@ const Layout = ({ children }) => {
       </div>
 
       {/* Top Navigation Bar */}
-      <nav className="relative z-10 w-full bg-white shadow-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between lg:hidden">
+  <nav className="fixed top-0 left-0 right-0 z-50 w-full bg-white shadow-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between lg:hidden">
         <div className="flex items-center gap-3">
           {/* <CompanyLogo /> */}
           <span className="font-bold text-lg text-gray-900">Alliance CropCraft</span>
@@ -183,7 +183,7 @@ const Layout = ({ children }) => {
       {menuOpen && (
         <div className="fixed inset-0 z-20 bg-black bg-opacity-30" onClick={() => setMenuOpen(false)}></div>
       )}
-      <div className={`fixed top-0 left-0 z-30 w-64 h-full bg-white shadow-lg transform ${menuOpen ? "translate-x-0" : "-translate-x-full"} transition-transform duration-300 lg:hidden`}>
+  <div className={`fixed top-0 left-0 z-40 w-64 h-full bg-white shadow-lg transform ${menuOpen ? "translate-x-0" : "-translate-x-full"} transition-transform duration-300 lg:hidden`}>
         <div className="p-6 border-b border-gray-200 flex items-center gap-3">
           {/* <CompanyLogo /> */}
           <span className="font-bold text-lg text-gray-900">Alliance CropCraft</span>
@@ -208,7 +208,7 @@ const Layout = ({ children }) => {
       </div>
 
       {/* Main content with sidebar for desktop */}
-      <div className="relative z-10 flex flex-col lg:flex-row">
+  <div className="relative z-10 flex flex-col lg:flex-row pt-16 lg:pt-0">
         {/* Sidebar for desktop - Fixed position */}
         <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-0 lg:top-0 lg:w-64 lg:h-screen bg-white shadow-lg border-r border-gray-200 z-20 overflow-y-auto">
           <div className="p-6 border-b border-gray-200 flex items-center gap-3">
