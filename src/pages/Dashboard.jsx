@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "../contexts/AuthContext"
-import { dashboardAPI } from "../services/api"
-import { TrendingUp, Users, Calendar, CheckCircle, Clock, Sun, Sunset, Moon, Cloud, CloudRain, Thermometer, MapPin, ArrowRight } from "lucide-react"
+import api from "../services/api"
+import { TrendingUp, Users, Calendar, CheckCircle, Clock, Sun, Sunset, Moon, Cloud, CloudRain, MapPin, ArrowRight } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 
 const Dashboard = () => {
@@ -13,39 +13,37 @@ const Dashboard = () => {
   const [tasks, setTasks] = useState({ morning: [], afternoon: [], evening: [] })
   const [weather, setWeather] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const fetchAll = async () => {
       try {
-        const statsResponse = await dashboardAPI.getStats()
-        const tasksResponse = await dashboardAPI.getTasks()
-
-        setStats(statsResponse.data)
-        setTasks(tasksResponse.data)
-
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error)
-      } finally {
-        setLoading(false)
+        // Fetch dashboard stats and tasks
+        const statsRes = await api.get("/dashboard/stats");
+  setStats(statsRes.data); // Keep backend stats for other uses if needed
+        const tasksRes = await api.get("/dashboard/tasks");
+        // Only filter out missed tasks; keep completed tasks visible for today
+        const filterMissed = (arr) => arr.filter(t => t.status !== "missed");
+        setTasks({
+          morning: filterMissed(tasksRes.data.morning),
+          afternoon: filterMissed(tasksRes.data.afternoon),
+          evening: filterMissed(tasksRes.data.evening)
+        });
+      } catch (err) {
+        setError("Failed to fetch dashboard data");
       }
-    }
-
-    const fetchWeatherData = async () => {
       try {
         // Farm location in Ilorin, Oyo State, Nigeria
         const farmLocation = {
           lat: 7.7883,
           lon: 3.9190,
           name: "Alliance CropCraft Farm"
-        }
-        
+        };
         const response = await fetch(
           `https://api.openweathermap.org/data/2.5/weather?lat=${farmLocation.lat}&lon=${farmLocation.lon}&appid=f4d6cec31b04951c0ac2ac398f1a3c40&units=metric`
-        )
-        
-
+        );
         if (response.ok) {
-          const data = await response.json()
+          const data = await response.json();
           setWeather({
             temperature: Math.round(data.main.temp),
             description: data.weather[0].description,
@@ -53,12 +51,12 @@ const Dashboard = () => {
             humidity: data.main.humidity,
             feelsLike: Math.round(data.main.feels_like),
             location: farmLocation.name
-          })
+          });
         } else {
-          throw new Error('Weather API request failed')
+          throw new Error('Weather API request failed');
         }
       } catch (error) {
-        console.error("Error fetching weather data:", error)
+        console.error("Error fetching weather data:", error);
         setWeather({
           temperature: 28,
           description: "partly cloudy",
@@ -66,26 +64,25 @@ const Dashboard = () => {
           humidity: 75,
           feelsLike: 31,
           location: "Alliance CropCraft Farm"
-        })
+        });
       }
-    }
-
-    fetchDashboardData()
-    fetchWeatherData()
-  }, [])
+      setLoading(false);
+    };
+    fetchAll();
+  }, []);
 
   const getPriorityColor = (priority) => {
     switch (priority) {
       case "high":
-        return "bg-red-100 text-red-700"
+        return "bg-red-100 text-red-700";
       case "medium":
-        return "bg-yellow-100 text-yellow-700"
+        return "bg-yellow-100 text-yellow-700";
       case "low":
-        return "bg-green-100 text-green-700"
+        return "bg-green-100 text-green-700";
       default:
-        return "bg-gray-100 text-gray-700"
+        return "bg-gray-100 text-gray-700";
     }
-  }
+  };
 
   const getWeatherIcon = (condition) => {
     switch (condition?.toLowerCase()) {
@@ -169,6 +166,11 @@ const Dashboard = () => {
       </div>
     )
   }
+  // Calculate today's stats from current tasks state
+  const allTodayTasks = [...tasks.morning, ...tasks.afternoon, ...tasks.evening];
+  const completedCount = allTodayTasks.filter(t => t.status === "completed").length;
+  const totalCount = allTodayTasks.length;
+  const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   const WeatherIcon = weather ? getWeatherIcon(weather.condition) : Sun
 
@@ -196,12 +198,12 @@ const Dashboard = () => {
               </p>
               <div className="flex flex-wrap items-center gap-4 sm:gap-8">
                 <div>
-                  <div className="text-3xl sm:text-2xl font-bold">{stats?.completedTasks || "0/0"}</div>
+                  <div className="text-3xl sm:text-2xl font-bold">{`${completedCount}/${totalCount}`}</div>
                   <p className="text-white text-sm">Tasks Completed</p>
                 </div>
                 <div className="hidden sm:block h-12 w-px bg-blue-300 opacity-50"></div>
                 <div>
-                  <div className="text-3xl sm:text-2xl font-bold">{stats?.completionRate || 0}%</div>
+                  <div className="text-3xl sm:text-2xl font-bold">{completionRate}%</div>
                   <p className="text-white text-sm">Success Rate</p>
                 </div>
               </div>

@@ -10,7 +10,6 @@ pool.connect((err, client, release) => {
   if (err) {
     console.error('❌ Database connection error:', err.stack);
   } else {
-    console.log('✅ Connected to database successfully');
     release();
   }
 });
@@ -33,7 +32,6 @@ class SimpleNotifications {
     // Send morning summary at 7 AM
     static setupDailySummary() {
         cron.schedule('0 7 * * *', async () => {
-            console.log('🌅 Running morning summary job...');
             const users = await this.getAllUsers();
             
             for (let user of users) {
@@ -48,7 +46,6 @@ class SimpleNotifications {
     // Send evening review at 8 PM
     static setupEveningReview() {
         cron.schedule('0 20 * * *', async () => {
-            console.log('📊 Running evening review job...');
             const users = await this.getAllUsers();
             
             for (let user of users) {
@@ -61,7 +58,6 @@ class SimpleNotifications {
     // Check for upcoming tasks every 30 minutes
     static setupTaskReminders() {
         cron.schedule('*/30 * * * *', async () => {
-            console.log('⏰ Checking for upcoming tasks...');
             const upcomingTasks = await this.getUpcomingTasks();
             
             for (let task of upcomingTasks) {
@@ -80,7 +76,6 @@ class SimpleNotifications {
     // Check for upcoming events every 15 minutes
     static setupEventReminders() {
         cron.schedule('*/15 * * * *', async () => {
-            console.log('📅 Checking for upcoming events...');
             try {
                 const result = await pool.query(`
                     SELECT e.*, u.id as user_id, u.email, u.full_name
@@ -110,7 +105,6 @@ class SimpleNotifications {
     // Check overdue tasks every hour
     static setupOverdueCheck() {
         cron.schedule('0 * * * *', async () => {
-            console.log('⚠️ Checking for overdue tasks...');
             const overdueTasks = await this.getOverdueTasks();
             
             for (let task of overdueTasks) {
@@ -120,70 +114,99 @@ class SimpleNotifications {
         });
     }
 
-    // Morning summary email
-    static async sendMorningSummary(user, tasks) {
-        try {
-            const html = `
-                <h2>🌅 Good Morning, ${user.full_name || user.name}!</h2>
-                <p>You have <strong>${tasks.length}</strong> tasks today:</p>
-                <div style="background: #f0f8f0; padding: 15px; margin: 15px 0;">
-                    ${tasks.map(task => `
-                        <div style="margin: 10px 0; padding: 10px; background: white; border-left: 4px solid #4CAF50;">
-                            <strong>${task.title}</strong><br>
-                            Due: ${new Date(task.due_date).toLocaleString()}<br>
-                            Priority: ${task.priority || 'Normal'}
-                        </div>
-                    `).join('')}
-                </div>
-                <p>Have a productive day!</p>
-            `;
-
-            await emailer.sendMail({
-                from: 'ogunmolamaryayobami@gmail.com',
-                to: user.email,
-                subject: `Daily Tasks - ${new Date().toDateString()}`,
-                html: html
-            });
-            
-            console.log(`✅ Morning summary sent to ${user.email}`);
-        } catch (error) {
-            console.error('❌ Error sending morning summary:', error);
+        // Morning summary email
+        static async sendMorningSummary(user, tasks) {
+                try {
+                        const firstName = (user.full_name || user.name || '').split(' ')[0];
+                        const html = `
+                                <div style="max-width:600px;margin:0 auto;padding:20px;font-family:Arial,sans-serif;background-color:#f9f9f9;">
+                                    <div style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);padding:30px;text-align:center;color:white;border-radius:10px 10px 0 0;">
+                                        <h1 style="margin:0;font-size:24px;">Good Morning!</h1>
+                                        <p style="margin:10px 0 0 0;opacity:0.9;">Alliance CropCraft</p>
+                                    </div>
+                                    <div style="background:white;padding:30px;border-radius:0 0 10px 10px;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+                                        <h2 style="color:#374151;margin-bottom:20px;">Hi ${firstName},</h2>
+                                        <p style="color:#6b7280;line-height:1.6;margin-bottom:20px;">
+                                            You have <strong>${tasks.length}</strong> tasks today.
+                                        </p>
+                                        <div style="background:#f3f4f6;padding:20px;border-radius:8px;margin:20px 0;">
+                                            ${tasks.map(task => `
+                                                <div style="margin:10px 0;padding:10px;background:white;border-left:4px solid #10b981;">
+                                                    <strong>${task.title}</strong><br>
+                                                    Due: ${new Date(task.due_date).toLocaleString()}<br>
+                                                    Priority: ${task.priority || 'Normal'}
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                        <div style="text-align:center;margin:30px 0;">
+                                            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/tasks" 
+                                                 style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:white;padding:15px 30px;text-decoration:none;border-radius:8px;font-weight:bold;display:inline-block;box-shadow:0 4px 6px rgba(16,185,129,0.3);">
+                                                View Tasks
+                                            </a>
+                                        </div>
+                                        <div style="border-top:1px solid #e5e7eb;padding-top:20px;margin-top:30px;">
+                                            <p style="color:#9ca3af;font-size:12px;margin:0;">Have a productive day!</p>
+                                        </div>
+                                        <div style="text-align:center;margin-top:20px;">
+                                            <p style="color:#6b7280;font-size:14px;margin:0;">Best regards,<br><strong style="color:#10b981;">The Alliance CropCraft Team</strong></p>
+                                        </div>
+                                    </div>
+                                </div>
+                        `;
+                        await emailer.sendMail({
+                                from: 'ogunmolamaryayobami@gmail.com',
+                                to: user.email,
+                                subject: `Daily Tasks - ${new Date().toDateString()}`,
+                                html: html
+                        });
+                } catch (error) {
+                        console.error('❌ Error sending morning summary:', error);
+                }
         }
-    }
 
-    // Evening review email
-    static async sendEveningReview(user, summary) {
-        try {
-            const percentage = Math.round((summary.completed / summary.total) * 100) || 0;
-            
-            const html = `
-                <h2>📊 Daily Review - ${user.full_name || user.name}</h2>
-                <div style="text-align: center; margin: 20px 0;">
-                    <div style="background: #4CAF50; color: white; padding: 20px; border-radius: 10px; display: inline-block;">
-                        <h1 style="margin: 0;">${percentage}%</h1>
-                        <p style="margin: 5px 0;">Tasks Completed</p>
-                    </div>
-                </div>
-                <div style="background: #f9f9f9; padding: 15px; margin: 15px 0;">
-                    <p>✅ Completed: ${summary.completed}</p>
-                    <p>⏳ Pending: ${summary.pending}</p>
-                    <p>⚠️ Overdue: ${summary.overdue}</p>
-                </div>
-                ${percentage >= 80 ? '<p style="color: green;">🎉 Great job today!</p>' : '<p>Keep up the good work tomorrow! 💪</p>'}
-            `;
-
-            await emailer.sendMail({
-                from: process.env.EMAIL_USER || 'ogunmolamaryayobami@gmail.com',
-                to: user.email,
-                subject: `Daily Review - ${percentage}% Complete`,
-                html: html
-            });
-            
-            console.log(`✅ Evening review sent to ${user.email}`);
-        } catch (error) {
-            console.error('❌ Error sending evening review:', error);
+        // Evening review email
+        static async sendEveningReview(user, summary) {
+                try {
+                        const firstName = (user.full_name || user.name || '').split(' ')[0];
+                        const percentage = Math.round((summary.completed / summary.total) * 100) || 0;
+                        const html = `
+                                <div style="max-width:600px;margin:0 auto;padding:20px;font-family:Arial,sans-serif;background-color:#f9f9f9;">
+                                    <div style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);padding:30px;text-align:center;color:white;border-radius:10px 10px 0 0;">
+                                        <h1 style="margin:0;font-size:24px;">Daily Review</h1>
+                                        <p style="margin:10px 0 0 0;opacity:0.9;">Alliance CropCraft</p>
+                                    </div>
+                                    <div style="background:white;padding:30px;border-radius:0 0 10px 10px;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+                                        <h2 style="color:#374151;margin-bottom:20px;">Hi ${firstName},</h2>
+                                        <div style="text-align:center;margin:20px 0;">
+                                            <div style="background:#10b981;color:white;padding:20px;border-radius:10px;display:inline-block;">
+                                                <h1 style="margin:0;">${percentage}%</h1>
+                                                <p style="margin:5px 0;">Tasks Completed</p>
+                                            </div>
+                                        </div>
+                                        <div style="background:#f3f4f6;padding:20px;border-radius:8px;margin:20px 0;">
+                                            <p>✅ Completed: ${summary.completed}</p>
+                                            <p>⏳ Pending: ${summary.pending}</p>
+                                            <p>⚠️ Overdue: ${summary.overdue}</p>
+                                        </div>
+                                        <div style="border-top:1px solid #e5e7eb;padding-top:20px;margin-top:30px;">
+                                            <p style="color:#9ca3af;font-size:12px;margin:0;">${percentage >= 80 ? '🎉 Great job today!' : 'Keep up the good work tomorrow! 💪'}</p>
+                                        </div>
+                                        <div style="text-align:center;margin-top:20px;">
+                                            <p style="color:#6b7280;font-size:14px;margin:0;">Best regards,<br><strong style="color:#10b981;">The Alliance CropCraft Team</strong></p>
+                                        </div>
+                                    </div>
+                                </div>
+                        `;
+                        await emailer.sendMail({
+                                from: process.env.EMAIL_USER || 'ogunmolamaryayobami@gmail.com',
+                                to: user.email,
+                                subject: `Daily Review - ${percentage}% Complete`,
+                                html: html
+                        });
+                } catch (error) {
+                        console.error('❌ Error sending evening review:', error);
+                }
         }
-    }
 
     // Task reminder email
     static async sendTaskReminder(user, task, timeLeft) {
@@ -209,7 +232,6 @@ class SimpleNotifications {
                 html: html
             });
             
-            console.log(`✅ Task reminder sent to ${user.email}`);
         } catch (error) {
             console.error('❌ Error sending task reminder:', error);
         }
@@ -234,7 +256,6 @@ class SimpleNotifications {
                 html: html
             });
             
-            console.log(`🚨 Urgent reminder sent to ${user.email}`);
         } catch (error) {
             console.error('❌ Error sending urgent reminder:', error);
         }
@@ -259,7 +280,6 @@ class SimpleNotifications {
                 html: html
             });
             
-            console.log(`⚠️ Overdue alert sent to ${user.email}`);
         } catch (error) {
             console.error('❌ Error sending overdue alert:', error);
         }
@@ -329,7 +349,6 @@ class SimpleNotifications {
 
         try {
             await emailer.sendMail(mailOptions);
-            console.log(`✅ Verification email sent to ${user.email}`);
         } catch (error) {
             console.error(`❌ Failed to send verification email to ${user.email}:`, error);
             throw error;
@@ -393,7 +412,6 @@ class SimpleNotifications {
 
         try {
             await emailer.sendMail(mailOptions);
-            console.log(`✅ Password reset email sent to ${user.email}`);
         } catch (error) {
             console.error(`❌ Failed to send password reset email to ${user.email}:`, error);
             throw error;
@@ -402,91 +420,49 @@ class SimpleNotifications {
 
 
 // ...existing exports...
-    // Send task assignment notification
-    static async sendTaskAssignment(assignedUser, createdByUser, task) {
-        const mailOptions = {
-            from: 'ogunmolamaryayobami@gmail.com',
-            to: assignedUser.email,
-            subject: 'New Task Assigned - Alliance CropCraft',
-            html: `
-                <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; background-color: #f9f9f9;">
-                    <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; color: white; border-radius: 10px 10px 0 0;">
-                        <h1 style="margin: 0; font-size: 24px;">New Task Assigned</h1>
-                        <p style="margin: 10px 0 0 0; opacity: 0.9;">Alliance CropCraft Task Management</p>
-                    </div>
-                    
-                    <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                        <h2 style="color: #374151; margin-bottom: 20px;">Hi ${assignedUser.full_name}!</h2>
-                        
-                        <p style="color: #6b7280; line-height: 1.6; margin-bottom: 20px;">
-                            You have been assigned a new task by <strong>${createdByUser.full_name}</strong>. Here are the details:
-                        </p>
-                        
-                        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                            <h3 style="margin: 0 0 15px 0; color: #10b981; font-size: 18px;">${task.title}</h3>
-                            ${task.description ? `<p style="color: #6b7280; margin: 0 0 15px 0;">${task.description}</p>` : ''}
-                            
-                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 15px;">
-                                <div>
-                                    <strong style="color: #374151;">Priority:</strong>
-                                    <span style="color: ${task.priority === 'high' ? '#dc2626' : task.priority === 'medium' ? '#d97706' : '#059669'}; text-transform: capitalize;">${task.priority}</span>
+        // Send task assignment notification
+        static async sendTaskAssignment(assignedUser, createdByUser, task) {
+                const firstName = (assignedUser.full_name || assignedUser.name || '').split(' ')[0];
+                const mailOptions = {
+                        from: 'ogunmolamaryayobami@gmail.com',
+                        to: assignedUser.email,
+                        subject: `New Task Assigned: ${task.title}`,
+                        html: `
+                                <div style='max-width:600px;margin:0 auto;padding:20px;font-family:Arial,sans-serif;background-color:#f9f9f9;'>
+                                    <div style='background:linear-gradient(135deg,#10b981 0%,#059669 100%);padding:30px;text-align:center;color:white;border-radius:10px 10px 0 0;'>
+                                        <h1 style='margin:0;font-size:24px;'>New Task Assigned</h1>
+                                        <p style='margin:10px 0 0 0;opacity:0.9;'>Alliance CropCraft</p>
+                                    </div>
+                                    <div style='background:white;padding:30px;border-radius:0 0 10px 10px;box-shadow:0 4px 6px rgba(0,0,0,0.1);'>
+                                        <h2 style='color:#374151;margin-bottom:20px;'>Hi ${firstName},</h2>
+                                        <p style='color:#6b7280;line-height:1.6;margin-bottom:20px;'>
+                                            You have been assigned a new task: <strong>${task.title}</strong>.<br>
+                                            Due: ${new Date(task.due_date).toLocaleString()}<br>
+                                            Priority: ${task.priority || 'Normal'}
+                                        </p>
+                                        <div style='text-align:center;margin:30px 0;'>
+                                            <a href='${process.env.FRONTEND_URL || 'http://localhost:5173'}/tasks' 
+                                                 style='background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:white;padding:15px 30px;text-decoration:none;border-radius:8px;font-weight:bold;display:inline-block;box-shadow:0 4px 6px rgba(16,185,129,0.3);'>
+                                                View Task Details
+                                            </a>
+                                        </div>
+                                        <div style='border-top:1px solid #e5e7eb;padding-top:20px;margin-top:30px;'>
+                                            <p style='color:#9ca3af;font-size:12px;margin:0;'>Please complete this task by the due date. If you have any questions, contact ${createdByUser.full_name} or your supervisor.</p>
+                                        </div>
+                                        <div style='text-align:center;margin-top:20px;'>
+                                            <p style='color:#6b7280;font-size:14px;margin:0;'>Best regards,<br><strong style='color:#10b981;'>The Alliance CropCraft Team</strong></p>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <strong style="color: #374151;">Due Date:</strong>
-                                    <span style="color: #6b7280;">${task.due_date}</span>
-                                </div>
-                                ${task.due_time ? `
-                                <div>
-                                    <strong style="color: #374151;">Due Time:</strong>
-                                    <span style="color: #6b7280;">${task.due_time}</span>
-                                </div>
-                                ` : ''}
-                                <div>
-                                    <strong style="color: #374151;">Type:</strong>
-                                    <span style="color: #6b7280; text-transform: capitalize;">${task.tag}</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div style="text-align: center; margin: 30px 0;">
-                            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/tasks" 
-                               style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
-                                      color: white; 
-                                      padding: 15px 30px; 
-                                      text-decoration: none; 
-                                      border-radius: 8px; 
-                                      font-weight: bold; 
-                                      display: inline-block;
-                                      box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
-                                View Task Details
-                            </a>
-                        </div>
-                        
-                        <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
-                            <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                                Please complete this task by the due date. If you have any questions, contact ${createdByUser.full_name} or your supervisor.
-                            </p>
-                        </div>
-                        
-                        <div style="text-align: center; margin-top: 20px;">
-                            <p style="color: #6b7280; font-size: 14px; margin: 0;">
-                                Best regards,<br>
-                                <strong style="color: #10b981;">The Alliance CropCraft Team</strong>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            `
-        };
-
-        try {
-            await emailer.sendMail(mailOptions);
-            console.log(`✅ Task assignment email sent to ${assignedUser.email}`);
-        } catch (error) {
-            console.error(`❌ Failed to send task assignment email to ${assignedUser.email}:`, error);
-            throw error;
+                        `
+                };
+                try {
+                        await emailer.sendMail(mailOptions);
+                } catch (error) {
+                        console.error(`❌ Failed to send task assignment email to ${assignedUser.email}:`, error);
+                        throw error;
+                }
         }
-    }
 
     // Send event notification
     static async sendEventNotification(createdByUser, event) {
@@ -579,7 +555,6 @@ class SimpleNotifications {
 
                 try {
                     await emailer.sendMail(mailOptions);
-                    console.log(`✅ Event notification email sent to ${user.email}`);
                 } catch (error) {
                     console.error(`❌ Failed to send event notification email to ${user.email}:`, error);
                     // Continue with other users even if one fails
@@ -692,7 +667,6 @@ class SimpleNotifications {
 
 // Simple setup function - call this once when your app starts
 function startNotifications() {
-    console.log('🔔 Starting notification system...');
     
     SimpleNotifications.setupDailySummary();    // 7 AM daily summary
     SimpleNotifications.setupEveningReview();   // 8 PM daily review  
@@ -700,12 +674,6 @@ function startNotifications() {
     SimpleNotifications.setupEventReminders();  // Every 15 min check for events
     SimpleNotifications.setupOverdueCheck();    // Every hour check
     
-    console.log('✅ Notification system active!');
-    console.log('📅 Daily Summary: 7:00 AM');
-    console.log('📊 Evening Review: 8:00 PM');
-    console.log('⏰ Task Reminders: Every 30 minutes');
-    console.log('📆 Event Reminders: Every 15 minutes');
-    console.log('⚠️ Overdue Check: Every hour');
 }
 
 // Optional: Routes you can add to your existing server

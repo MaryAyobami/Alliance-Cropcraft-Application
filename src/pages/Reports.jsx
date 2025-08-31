@@ -67,7 +67,6 @@ const Reports = () => {
         setStaffPerformance(staffResponse.data)
         setTaskDistribution(distributionResponse.data)
         setInsights(insightsResponse.data)
-        
         // Generate task trends based on real stats
         generateTaskTrends(statsResponse.data)
       } else {
@@ -569,7 +568,7 @@ const Reports = () => {
           </div>
 
           {/* AI Insights */}
-          <div className="card-enhanced">
+          {/* <div className="card-enhanced">
             <div className="flex items-center space-x-3 mb-6">
               <div className="w-10 h-10 farm-gradient rounded-xl flex items-center justify-center shadow-lg">
                 <Activity className="w-5 h-5 text-white" />
@@ -609,7 +608,7 @@ const Reports = () => {
                 )
               })}
             </div>
-          </div>
+          </div> */}
         </>
       )}
 

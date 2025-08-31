@@ -74,7 +74,7 @@ const TaskDetails = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto px-2 sm:px-4 lg:px-8 py-6">
+    <div className="space-y-6 mx-auto px-2 sm:px-4 lg:px-8 py-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
@@ -129,7 +129,7 @@ const TaskDetails = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <span className="font-medium text-gray-700">Due Date:</span>
-                <span className="text-gray-600">{task.due_date || "Not specified"}</span>
+                <span className="text-gray-600">{new Date(task.due_date).toLocaleDateString() || "Not specified"}</span>
               </div>
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <span className="font-medium text-gray-700">Due Time:</span>

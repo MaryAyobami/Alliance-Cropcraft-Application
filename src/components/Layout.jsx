@@ -99,8 +99,15 @@ const Layout = ({ children }) => {
 
   	const navigation = [
 		{ name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-		{ name: "Tasks", href: "/tasks", icon: CheckSquare },
-		{ name: "Calendar", href: "/calendar", icon: Calendar },
+		 { 
+    name: "Tasks", 
+    icon: CheckSquare,
+    submenu: [
+      { name: "My Tasks", href: "/tasks", icon: CheckSquare },
+      { name: "Task History", href: "/task-history", icon: Calendar },
+    ]
+  },
+		// { name: "Calendar", href: "/calendar", icon: Calendar },
 		{ 
 			name: "Livestock", 
 			icon: Activity,
@@ -110,7 +117,7 @@ const Layout = ({ children }) => {
 			]
 		},
 		{ name: "Farm Resources", href: "/farm-resources", icon: Package },
-		{ name: "Farm Map", href: "/farm-map", icon: Map },
+		// { name: "Farm Map", href: "/farm-map", icon: Map },
 		{ name: "Planting Tracker", href: "/planting-tracker", icon: Sprout },
 		{ name: "Users", href: "/users", icon: Users },
 		...(user?.role === "Admin" || user?.role === "Farm Manager" ? [{ name: "Reports", href: "/reports", icon: BarChart3 }] : []),
@@ -150,10 +157,10 @@ const Layout = ({ children }) => {
           </button>
           {/* User/Logout/Notifications */}
           <div className="flex items-center gap-3">
-            <button className="relative p-2 text-gray-400 hover:text-gray-600">
+            {/* <button className="relative p-2 text-gray-400 hover:text-gray-600">
               <Bell className="w-5 h-5" />
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
-            </button>
+            </button> */}
             <div className="hidden sm:flex items-center gap-2">
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900">{user?.full_name}</p>

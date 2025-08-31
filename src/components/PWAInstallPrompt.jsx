@@ -26,7 +26,6 @@ const PWAInstallPrompt = () => {
 
     // Listen for beforeinstallprompt event
     const handleBeforeInstallPrompt = (e) => {
-      console.log('beforeinstallprompt event fired')
       
       // Prevent Chrome 67 and earlier from automatically showing the prompt
       e.preventDefault()
@@ -38,7 +37,6 @@ const PWAInstallPrompt = () => {
 
     // Listen for app installed event
     const handleAppInstalled = (evt) => {
-      console.log('PWA was installed')
       setShowInstall(false)
       setIsInstalled(true)
       setDeferredPrompt(null)
@@ -60,7 +58,6 @@ const PWAInstallPrompt = () => {
       
       // Wait for the user to respond to the prompt
       const { outcome } = await deferredPrompt.userChoice
-      console.log(`Install prompt outcome: ${outcome}`)
       
       // Clear the deferredPrompt
       setDeferredPrompt(null)

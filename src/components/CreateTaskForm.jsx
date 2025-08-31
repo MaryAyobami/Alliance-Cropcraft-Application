@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { tasksAPI, userAPI } from "../services/api"
+import { Navigate } from "react-router-dom"
 
 const CreateTaskForm = ({ onTaskCreated, onCancel }) => {
   const [users, setUsers] = useState([])
@@ -130,9 +131,11 @@ const CreateTaskForm = ({ onTaskCreated, onCancel }) => {
       if (onTaskCreated) {
         onTaskCreated(response.data)
       }
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(""), 3000)
+    setTimeout(() => {
+      setSuccess("")
+      if (onCancel) onCancel()
+        Navigate("/tasks")
+    }, 2000) 
       
     } catch (err) {
       console.error("Task creation error:", err)

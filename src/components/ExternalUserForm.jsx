@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react"
-import { userAPI } from "../services/api"
+import { externalUsersAPI } from "../services/api"
 
 const ExternalUserForm = ({ user: editUser, mode, onUserSaved, onCancel }) => {
   const [formData, setFormData] = useState({
     full_name: "",
     phone: "",
     job_description: "",
-    email: ""
+    email: "",
+    company_name: "",
+    address: ""
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -33,7 +35,9 @@ const ExternalUserForm = ({ user: editUser, mode, onUserSaved, onCancel }) => {
         full_name: editUser.full_name || "",
         phone: editUser.phone || "",
         job_description: editUser.job_description || editUser.role || "",
-        email: editUser.email || ""
+        email: editUser.email || "",
+        company_name: editUser.company_name || "",
+        address: editUser.address || ""
       })
     }
   }, [editUser, mode])
@@ -89,19 +93,22 @@ const ExternalUserForm = ({ user: editUser, mode, onUserSaved, onCancel }) => {
       const submitData = {
         full_name: formData.full_name.trim(),
         phone: formData.phone.trim(),
-        role: "External User", // Fixed role for external users
+        role: formData.job_description.trim(), // Send job_description as role
         job_description: formData.job_description.trim(),
         email: formData.email.trim() || null,
-        is_external: true
+        is_external: true,
+        company_name: formData.company_name.trim() || null,
+        address: formData.address.trim() || null
       }
 
-      // For now, we'll use the existing user API, but this could be a separate endpoint
-      
+      // Use the dedicated externalUsersAPI for external user actions
       let response
       if (mode === "create") {
-        response = await userAPI.createUser(submitData)
+        response = await externalUsersAPI.createExternalUser(submitData)
       } else {
-        response = await userAPI.updateUser(editUser.id, submitData)
+        // Always send job_description as role for edit as well
+        submitData.role = formData.job_description.trim();
+        response = await externalUsersAPI.updateExternalUser(editUser.id, submitData)
       }
 
       if (onUserSaved) {
@@ -229,6 +236,33 @@ const ExternalUserForm = ({ user: editUser, mode, onUserSaved, onCancel }) => {
           {fieldErrors.email && (
             <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>
           )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Company Name <span className="text-gray-500 text-xs">(Optional)</span>
+          </label>
+          <input
+            type="text"
+            name="company_name"
+            value={formData.company_name}
+            onChange={handleChange}
+            className={getFieldClassName('company_name')}
+            placeholder="Enter company name (optional)"
+          />
+        </div>
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Address <span className="text-gray-500 text-xs">(Optional)</span>
+          </label>
+          <input
+            type="text"
+            name="address"
+            value={formData.address}
+            onChange={handleChange}
+            className={getFieldClassName('address')}
+            placeholder="Enter address (optional)"
+          />
         </div>
       </div>
 

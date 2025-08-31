@@ -12,6 +12,7 @@ import { format } from "date-fns"
 
 const Tasks = () => {
   const { user } = useAuth()
+  const [activeTab, setActiveTab] = useState('personal') 
   const navigate = useNavigate()
   const [tasks, setTasks] = useState([])
   const [weeklyTasks, setWeeklyTasks] = useState([])
@@ -34,7 +35,7 @@ const Tasks = () => {
   const [editingTask, setEditingTask] = useState(null)
   const [showEditTaskForm, setShowEditTaskForm] = useState(false)
   const videoRef = useRef(null)
-
+  const [completionError, setCompletionError] = useState("")
   // Role-based permissions
   const canCreate = ["Admin", "Farm Manager"].includes(user?.role)
   const canUpdate = ["Admin", "Farm Manager"].includes(user?.role)
@@ -44,30 +45,51 @@ const Tasks = () => {
     fetchTasks()
     fetchWeeklyTasks()
   }, [])
+// --- Fix: Only enable "Mark Complete" if photo evidence is present ---
+const isCompletionReady = completionData.photo !== null
 
-  
+  // Open camera and set video stream
   const handleOpenCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true })
       setCameraStream(stream)
       setShowCamera(true)
-      if (videoRef.current) videoRef.current.srcObject = stream
+      // Wait for videoRef to be ready
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+          videoRef.current.play()
+        }
+      }, 100)
     } catch (err) {
       alert("Camera access denied")
     }
   }
 
+  // Take photo from video stream
   const handleTakePhoto = () => {
+    if (!videoRef.current) return
+    const video = videoRef.current
     const canvas = document.createElement("canvas")
-    canvas.width = videoRef.current.videoWidth
-    canvas.height = videoRef.current.videoHeight
-    canvas.getContext("2d").drawImage(videoRef.current, 0, 0)
+    canvas.width = video.videoWidth || 640
+    canvas.height = video.videoHeight || 480
+    const ctx = canvas.getContext("2d")
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
     canvas.toBlob(blob => {
-      setCompletionData({ ...completionData, photo: blob, photoPreview: URL.createObjectURL(blob) })
-      setShowCamera(false)
-      cameraStream.getTracks().forEach(track => track.stop())
-    }, "image/jpeg")
-  }
+      if (blob) {
+        setCompletionData(prev => ({
+          ...prev,
+          photo: blob,
+          photoPreview: URL.createObjectURL(blob)
+        }))
+        setShowCamera(false)
+        if (cameraStream) {
+          cameraStream.getTracks().forEach(track => track.stop())
+          setCameraStream(null)
+        }
+    }
+  }, "image/jpeg")
+}
 
   const fetchTasks = async () => {
     try {
@@ -166,6 +188,11 @@ const Tasks = () => {
   }
 
   const handleSubmitCompletion = async () => {
+    if (!completionData.photo) {
+    setCompletionError("Please add photo evidence before completing the task.")
+    return
+  }
+  setCompletionError("")
     try {
       const formData = new FormData()
       formData.append('taskId', selectedTask.id)
@@ -195,6 +222,7 @@ const Tasks = () => {
       // Close form
       setShowCompletionForm(false)
       setSelectedTask(null)
+      setCompletionError("")
     } catch (error) {
       console.error("Error completing task:", error)
       alert("Failed to complete task. Please try again.")
@@ -287,14 +315,15 @@ const Tasks = () => {
       return { personal: filteredTasks, staff: [] }
     }
 
-    const personal = filteredTasks.filter(task => 
-      task.assigned_to === user?.id || task.created_by === user?.id
-    )
+    // const personal = filteredTasks.filter(task => 
+    //   task.assigned_to === user?.id || task.created_by === user?.id
+    // )
     
-    const staff = filteredTasks.filter(task => 
-      task.assigned_to !== user?.id && task.created_by !== user?.id
-    )
-
+    // const staff = filteredTasks.filter(task => 
+    //   task.assigned_to !== user?.id && task.created_by !== user?.id
+    // )
+    const personal = filteredTasks.filter(task => task.assigned_to === user?.id)
+    const staff = filteredTasks.filter(task => task.assigned_to !== user?.id)
     return { personal, staff }
   }, [filteredTasks, user?.id, user?.role])
 
@@ -351,14 +380,14 @@ const Tasks = () => {
                 <option value="completed">Completed</option>
               </select>
             </div>
-            {["Admin", "Farm Manager"].includes(user?.role) && (
+            {/* {["Admin", "Farm Manager"].includes(user?.role) && (
               <button
                 className="px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 text-sm font-medium rounded-xl border border-blue-200 transition-all"
                 onClick={() => setShowStaffOverview(true)}
               >
                 Staff Overview
               </button>
-            )}
+            )} */}
             {canCreate && (
               <button
                 className="btn-primary text-sm"
@@ -375,7 +404,35 @@ const Tasks = () => {
       {/* Admin/Farm Manager Layout with Separate Sections */}
       {["Admin", "Farm Manager"].includes(user?.role) ? (
         <>
-          {/* Personal Tasks Section */}
+        {/* Tabs */}
+    <div className="flex border-b border-gray-200 mb-6">
+      <button
+        onClick={() => setActiveTab('personal')}
+        className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors duration-200 ${
+          activeTab === 'personal'
+            ? 'border-primary-600 text-primary-600'
+            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+        }`}
+      >
+        Personal Tasks
+      </button>
+      <button
+        onClick={() => setActiveTab('staff')}
+        className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors duration-200 ${
+          activeTab === 'staff'
+            ? 'border-primary-600 text-primary-600'
+            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+        }`}
+      >
+        Staff Tasks
+      </button>
+    </div>
+
+    {/* Tab Content */}
+    {activeTab === 'personal' && (
+      <div className="mb-8">
+        {/* ...render your personal tasks section here, using categorizedTasks.personal... */}
+        {/* Personal Tasks Section */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Personal Tasks</h2>
@@ -467,7 +524,7 @@ const Tasks = () => {
                     ✅ Completed {task.completed_at ? new Date(task.completed_at).toLocaleString() : 'Recently'}
                   </div>
                   <div className="flex items-center space-x-2">
-                    <button
+                    {/* <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleCompletedTaskClick(task);
@@ -476,7 +533,7 @@ const Tasks = () => {
                     >
                       <Eye className="w-4 h-4" />
                       <span>View Details</span>
-                    </button>
+                    </button> */}
                                           {canDelete && (
                         <button
                           onClick={(e) => {
@@ -504,14 +561,14 @@ const Tasks = () => {
                     <span>Mark Complete</span>
                   </button>
                   {(canUpdate || canDelete) && (
-                    <div className="flex justify-center space-x-2">
+                    <div className="flex justify-center space-x-2 pt-2">
                       {canUpdate && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleEditTask(task);
                           }}
-                          className="px-3 py-1.5 bg-blue-50 text-blue-600 hover:text-blue-700 hover:bg-blue-100 text-sm font-medium flex items-center space-x-1 transition-all duration-200 rounded-md border border-blue-200"
+                          className="w-full justify-center py-1.5 bg-blue-50 rounded-xl text-blue-600 hover:text-blue-700 hover:bg-blue-100 text-sm font-medium flex items-center space-x-1 transition-all duration-200 border border-blue-200"
                         >
                           <Edit className="w-4 h-4" />
                           <span>Edit</span>
@@ -523,7 +580,7 @@ const Tasks = () => {
                             e.stopPropagation();
                             handleDeleteTask(task.id);
                           }}
-                          className="px-3 py-1.5 bg-red-50 text-red-600 hover:text-red-700 hover:bg-red-100 text-sm font-medium flex items-center space-x-1 transition-all duration-200 rounded-md border border-red-200"
+                          className="w-full justify-center rounded-xl px-3 py-1.5 bg-red-50 text-red-600 hover:text-red-700 hover:bg-red-100 text-sm font-medium flex items-center space-x-1 transition-all duration-200 rounded-md border border-red-200"
                         >
                           <Trash2 className="w-4 h-4" />
                           <span>Delete</span>
@@ -538,8 +595,12 @@ const Tasks = () => {
         </div>
       )}
     </div>
-
-    {/* Staff Tasks Section */}
+      </div>
+    )}
+    {activeTab === 'staff' && (
+      <div className="mb-8">
+        {/* ...render your staff tasks section here, using categorizedTasks.staff... */}
+       {/* Staff Tasks Section */}
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-900">Staff Tasks</h2>
@@ -615,7 +676,7 @@ const Tasks = () => {
                     e.stopPropagation();
                     navigate(`/task-details/${task.id}`);
                   }}
-                  className="px-3 py-1.5 bg-blue-50 text-blue-600 hover:text-blue-700 hover:bg-blue-100 text-sm font-medium flex items-center space-x-1 transition-all duration-200 rounded-md border border-blue-200"
+                  className="w-full justify-center rounded-xl px-3 py-1.5 bg-blue-50 text-blue-600 hover:text-blue-700 hover:bg-blue-100 text-sm font-medium flex items-center space-x-1 transition-all duration-200 rounded-md border border-blue-200"
                 >
                   <Eye className="w-4 h-4" />
                   <span>View</span>
@@ -626,7 +687,7 @@ const Tasks = () => {
                       e.stopPropagation();
                       handleSendReminder(task.id, task.assigned_to);
                     }}
-                    className="px-3 py-1.5 bg-orange-50 text-orange-600 hover:text-orange-700 hover:bg-orange-100 text-sm font-medium flex items-center space-x-1 transition-all duration-200 rounded-md border border-orange-200"
+                    className="w-full justify-center rounded-xl px-3 py-1.5 bg-orange-50 text-orange-600 hover:text-orange-700 hover:bg-orange-100 text-sm font-medium flex items-center space-x-1 transition-all duration-200 rounded-md border border-orange-200"
                   >
                     <User className="w-4 h-4" />
                     <span>Remind</span>
@@ -638,7 +699,13 @@ const Tasks = () => {
         </div>
       )}
     </div>
+      </div>
+    )}
   </>
+        
+
+   
+  
 ) : (
   /* Regular User Layout */
   <div className="mb-8">
@@ -1036,8 +1103,10 @@ const Tasks = () => {
                   />
                 </div>
               </div>
-
-              {/* Action Buttons */}
+              {completionError && (
+                <div className="text-red-600 text-sm mb-4">{completionError}</div>
+              )}
+                            {/* Action Buttons */}
               <div className="flex space-x-3 mt-8">
                 <button
                   onClick={closeCompletionForm}
@@ -1046,8 +1115,10 @@ const Tasks = () => {
                   Cancel
                 </button>
                 <button
-                  onClick={handleSubmitCompletion}
+                  onClick={isCompletionReady ? handleSubmitCompletion : undefined}
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 transition-all font-medium shadow-md hover:shadow-lg"
+                  disabled={!isCompletionReady}
+                  type="button"
                 >
                   ✅ Complete Task
                 </button>
@@ -1188,7 +1259,7 @@ const Tasks = () => {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">Staff Tasks Overview</h3>
-                    <p className="text-sm text-gray-500">Monitor and manage all staff assignments</p>
+                    <p className="text-sm text-gray-500">Monitor and manage all staff tasks</p>
                   </div>
                 </div>
                 <button
@@ -1235,7 +1306,7 @@ const Tasks = () => {
                           </div>
                         </td>
                         <td className="p-3 border-b">
-                          <span className="text-sm text-gray-600">{task.due_date || 'Not set'}</span>
+                          <span className="text-sm text-gray-600">{new Date(task.due_date).toLocaleDateString() || 'Not set'}</span>
                         </td>
                         <td className="p-3 border-b">
                           <span className="text-sm text-gray-600">{task.due_time || 'Not set'}</span>

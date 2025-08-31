@@ -1,3 +1,4 @@
+
 const express = require("express")
 const cors = require("cors")
 const bcrypt = require("bcrypt")
@@ -10,6 +11,11 @@ const cloudinary = require('cloudinary').v2
 require("dotenv").config()
 
 const { saveSubscription } = require('./push')
+// ...existing imports and setup...
+// ...existing code...
+// Initialize Express app
+const app = express()
+const port = process.env.PORT || 5000
 
 // Import notifications only if the file exists
 let notificationSystem = null;
@@ -32,10 +38,9 @@ const sendNotificationEmail = async (mailOptions) => {
         service: 'gmail',
         auth: {
           user: process.env.EMAIL_USER || 'ogunmolamaryayobami@gmail.com',
-          pass: process.env.EMAIL_APP_PASSWORD || 'vglx evpx phmy rgmy'
-        }
-      });
-      await emailer.sendMail(mailOptions);
+          pass: process.env.EMAIL_APP
+      }});
+      await emailer.sendMail(mailOpti_PASSWORD || 'vglx evpx phmy rgmy');
     }
   } catch (error) {
     console.error('Failed to send email:', error);
@@ -43,8 +48,7 @@ const sendNotificationEmail = async (mailOptions) => {
   }
 }
 
-const app = express()
-const port = process.env.PORT || 5000
+
 
 // Enhanced error handling
 process.on('unhandledRejection', (reason, promise) => {
@@ -96,7 +100,6 @@ const connectWithRetry = async () => {
     try {
       const client = await pool.connect();
       client.release();
-      console.log('Database connected successfully');
       return;
     } catch (err) {
       retries++;
@@ -146,7 +149,6 @@ app.use(express.json())
 if (notificationSystem && notificationSystem.startNotifications) {
   try {
     notificationSystem.startNotifications();
-    console.log('Notification system started');
   } catch (err) {
     console.warn('Failed to start notification system:', err.message);
   }
@@ -361,7 +363,6 @@ app.post("/api/auth/register", async (req, res) => {
     if (notificationSystem) {
       try {
         await notificationSystem.SimpleNotifications.sendVerificationEmail(user, verificationToken)
-        console.log(`Verification email sent to ${email}`)
       } catch (emailError) {
         console.error('Failed to send verification email:', emailError)
         // Don't fail registration if email fails, but log it
@@ -451,7 +452,6 @@ app.post("/api/auth/send-verification", async (req, res) => {
     if (notificationSystem) {
       try {
         await notificationSystem.SimpleNotifications.sendVerificationEmail(user, verificationToken)
-        console.log(`Verification email resent to ${email}`)
       } catch (emailError) {
         console.error('Failed to send verification email:', emailError)
         return res.status(500).json({ 
@@ -459,7 +459,6 @@ app.post("/api/auth/send-verification", async (req, res) => {
         })
       }
     } else {
-      console.log(`Verification email would be sent to ${email} with token: ${verificationToken}`)
     }
     
     res.json({ 
@@ -524,7 +523,6 @@ app.post("/api/auth/verify-email", async (req, res) => {
       [user.id]
     )
     
-    console.log(`Email verified successfully for user: ${user.email}`)
     
     res.json({ 
       message: "Email verified successfully! You can now log in to your account.",
@@ -574,7 +572,6 @@ app.post("/api/auth/forgot-password", async (req, res) => {
         console.error('Failed to send password reset email:', emailError)
       }
     } else {
-      console.log(`Password reset link for ${email}: https://your-app.com/reset-password?token=${resetToken}`)
     }
 
     res.json({ message: "If an account with this email exists, a password reset link has been sent." })
@@ -629,7 +626,6 @@ app.get("/api/dashboard/stats", authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id
     const userRole = req.user.role
-    console.log("User ID:", userId, "Role:", userRole)
     
     // Get today's tasks based on user role
     let todayTasksQuery
@@ -651,12 +647,15 @@ app.get("/api/dashboard/stats", authenticateToken, async (req, res) => {
     let weekTasksQuery
     let weekTasksParams
 
-    weekTasksQuery = `
-        SELECT COUNT(*) as count FROM tasks 
-        WHERE assigned_to = $1 
-        AND due_date >= DATE_TRUNC('week', CURRENT_DATE) 
-        AND due_date < DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '7 days'
-      `
+   weekTasksQuery = `
+  SELECT COUNT(*) as count FROM tasks
+  WHERE assigned_to = $1
+    AND (
+      (tag = 'static' AND recurrent = true AND due_date >= DATE_TRUNC('week', CURRENT_DATE) AND due_date < DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '7 days')
+      OR
+      (tag = 'dynamic' AND active_date >= DATE_TRUNC('week', CURRENT_DATE) AND active_date < DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '7 days')
+    )
+`
     weekTasksParams = [userId]
     
 
@@ -686,34 +685,23 @@ app.get("/api/dashboard/stats", authenticateToken, async (req, res) => {
 app.get("/api/dashboard/tasks", authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id
-    const userRole = req.user.role
-
     let query
     let params
 
-    if (["Admin", "Farm Manager"].includes(userRole)) {
+  
       query = `
-        SELECT t.*, u.full_name as assigned_name, c.full_name as created_by_name
-        FROM tasks t 
-        LEFT JOIN users u ON t.assigned_to = u.id 
-        LEFT JOIN users c ON t.created_by = c.id
-        WHERE t.due_date = CURRENT_DATE 
-        ORDER BY t.due_time ASC NULLS LAST
-      `
-      params = []
-    } else {
-      query = `
-        SELECT t.*, u.full_name as assigned_name 
-        FROM tasks t 
-        LEFT JOIN users u ON t.assigned_to = u.id 
-        WHERE t.assigned_to = $1 AND t.due_date = CURRENT_DATE 
-        ORDER BY t.due_time ASC NULLS LAST
-      `
+      SELECT *
+      FROM tasks 
+      WHERE assigned_to = $1 AND (
+        (tag = 'static' AND recurrent = true)
+        OR
+        (tag = 'dynamic' AND active_date = CURRENT_DATE)
+      )
+      ORDER BY due_time ASC NULLS LAST
+    `
       params = [userId]
-    }
 
     const result = await pool.query(query, params)
-
     // Group tasks by time of day - with better null handling
     const morningTasks = result.rows.filter((task) => {
       if (!task.due_time) return false;
@@ -748,15 +736,35 @@ app.get("/api/dashboard/tasks", authenticateToken, async (req, res) => {
 // --- Scheduled job to reset static tasks' status daily ---
 cron.schedule("0 0 * * *", async () => {
   try {
-    // Reset status of static, recurrent tasks to 'pending' for today
+    // 1. Archive completed/missed static recurring tasks to task_history
     await pool.query(`
-      UPDATE tasks
-      SET status = 'pending'
+      INSERT INTO task_history (
+        original_task_id, title, description, assigned_to, completion_date, completed_at, status, evidence_photo, completion_notes, priority, due_date, due_time
+      )
+      SELECT id, title, description, assigned_to, completed_at::date, completed_at, status, evidence_photo, completion_notes, priority, due_date, due_time
+      FROM tasks
+      WHERE tag = 'static' AND recurrent = true AND (status = 'completed' OR (due_date < CURRENT_DATE AND status != 'completed'))
+    `);
+
+    // 2. Archive overdue dynamic tasks to task_history and delete from tasks
+    await pool.query(`
+      INSERT INTO task_history (
+        original_task_id, title, description, assigned_to, completion_date, completed_at, status, evidence_photo, completion_notes, priority, due_date, due_time
+      )
+      SELECT id, title, description, assigned_to, NULL, NULL, 'missed', evidence_photo, completion_notes, priority, due_date, due_time
+      FROM tasks
+      WHERE tag = 'dynamic' AND due_date < CURRENT_DATE AND status != 'completed'
+    `);
+    await pool.query(`
+      DELETE FROM tasks WHERE tag = 'dynamic' AND due_date < CURRENT_DATE AND status != 'completed'`);
+
+    // 3. Reset static recurring tasks to 'pending'
+    await pool.query(`
+      UPDATE tasks SET status = 'pending', completed_at = NULL, evidence_photo = NULL, completion_notes = NULL
       WHERE tag = 'static' AND recurrent = true
-    `)
-    console.log("Static tasks reset to pending for today")
+    `);
   } catch (err) {
-    console.error("Error resetting static tasks:", err)
+    console.error('Cron job error:', err);
   }
 })
 
@@ -991,60 +999,158 @@ app.get("/api/tasks", authenticateToken, async (req, res) => {
     res.status(500).json({ message: "Server error" })
   }
   })
+// ...existing code...
+// --- New: Get all task history for current user ---
+app.get("/api/task-history", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    let query, params;
+    if (["Admin", "Farm Manager", "Admin User"].includes(userRole)) {
+      query = `
+        SELECT h.*, u.full_name as assigned_name
+        FROM task_history h
+        LEFT JOIN users u ON h.assigned_to = u.id
+        ORDER BY h.archived_at DESC
+      `;
+      params = [];
+    } else {
+      query = `
+        SELECT h.*, u.full_name as assigned_name
+        FROM task_history h
+        LEFT JOIN users u ON h.assigned_to = u.id
+        WHERE h.assigned_to = $1
+        ORDER BY h.archived_at DESC
+      `;
+      params = [userId];
+    }
+    const result = await pool.query(query, params);
+    res.json({ data: result.rows });
+  } catch (error) {
+    console.error("Get task history error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// --- New: Get task history stats for current user ---
+app.get("/api/task-history/stats", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    let query, params;
+    if (["Admin", "Farm Manager", "Admin User"].includes(userRole)) {
+      query = `
+        SELECT status, COUNT(*) as count
+        FROM task_history
+        GROUP BY status
+      `;
+      params = [];
+    } else {
+      query = `
+        SELECT status, COUNT(*) as count
+        FROM task_history
+        WHERE assigned_to = $1
+        GROUP BY status
+      `;
+      params = [userId];
+    }
+    const result = await pool.query(query, params);
+    res.json({ stats: result.rows });
+  } catch (error) {
+    console.error("Get task history stats error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 // Complete task with evidence upload
 app.post("/api/tasks/:id/complete-with-evidence", authenticateToken, upload.single("evidence"), async (req, res) => {
   try {
-    const taskId = req.params.id
-    const { notes, completedAt } = req.body
-    const completionTime = completedAt || new Date().toISOString()
+    const taskId = req.params.id;
+    const { notes, completedAt } = req.body;
+    const completionTime = completedAt || new Date().toISOString();
 
-    if (req.file) {
-      // Upload to Cloudinary using buffer
-      cloudinary.uploader.upload_stream(
-        { resource_type: "image", folder: "evidence" },
-        async (error, cloudRes) => {
-          if (error) {
-            console.error("Cloudinary upload error:", error)
-            return res.status(500).json({ message: "Image upload failed" })
+    // Get the task type
+    const taskResult = await pool.query("SELECT * FROM tasks WHERE id = $1", [taskId]);
+    if (taskResult.rows.length === 0) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+    const task = taskResult.rows[0];
+
+    // Helper to archive to history
+    const archiveToHistory = async (evidencePhotoUrl) => {
+      await pool.query(
+        `INSERT INTO task_history (
+          original_task_id, title, description, assigned_to, completion_date, completed_at, status, evidence_photo, completion_notes, priority, due_date, due_time
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+        [
+          task.id,
+          task.title,
+          task.description,
+          task.assigned_to,
+          completionTime ? completionTime.split('T')[0] : null,
+          completionTime,
+          'completed',
+          evidencePhotoUrl || task.evidence_photo,
+          notes || null,
+          task.priority,
+          task.due_date,
+          task.due_time
+        ]
+      );
+    };
+
+    if (task.tag === 'dynamic') {
+      // Dynamic: archive and delete
+      let evidencePhotoUrl = task.evidence_photo;
+      if (req.file) {
+        // Upload to Cloudinary
+        cloudinary.uploader.upload_stream(
+          { resource_type: "image", folder: "evidence" },
+          async (error, cloudRes) => {
+            if (error) {
+              console.error("Cloudinary upload error:", error);
+              return res.status(500).json({ message: "Image upload failed" });
+            }
+            evidencePhotoUrl = cloudRes.secure_url;
+            await archiveToHistory(evidencePhotoUrl);
+            await pool.query("DELETE FROM tasks WHERE id = $1", [taskId]);
+            res.json({ message: "Dynamic task completed and archived", evidence_url: evidencePhotoUrl, completed_at: completionTime });
           }
-          
-          try {
-            // Update task with evidence and completion details
+        ).end(req.file.buffer);
+      } else {
+        await archiveToHistory(evidencePhotoUrl);
+        await pool.query("DELETE FROM tasks WHERE id = $1", [taskId]);
+        res.json({ message: "Dynamic task completed and archived", completed_at: completionTime });
+      }
+    } else {
+      // Static: just mark as completed
+      if (req.file) {
+        cloudinary.uploader.upload_stream(
+          { resource_type: "image", folder: "evidence" },
+          async (error, cloudRes) => {
+            if (error) {
+              console.error("Cloudinary upload error:", error);
+              return res.status(500).json({ message: "Image upload failed" });
+            }
             await pool.query(
               "UPDATE tasks SET status = 'completed', evidence_photo = $1, completion_notes = $2, completed_at = $3 WHERE id = $4",
               [cloudRes.secure_url, notes || null, completionTime, taskId]
-            )
-            res.json({ 
-              message: "Task completed with evidence", 
-              evidence_url: cloudRes.secure_url,
-              completed_at: completionTime
-            })
-          } catch (dbError) {
-            console.error("Database update error:", dbError)
-            res.status(500).json({ message: "Failed to update task status" })
+            );
+            res.json({ message: "Static task completed with evidence", evidence_url: cloudRes.secure_url, completed_at: completionTime });
           }
-        }
-      ).end(req.file.buffer)
-    } else {
-      // Complete task without evidence photo
-      try {
+        ).end(req.file.buffer);
+      } else {
         await pool.query(
           "UPDATE tasks SET status = 'completed', completion_notes = $1, completed_at = $2 WHERE id = $3",
           [notes || null, completionTime, taskId]
-        )
-        res.json({ 
-          message: "Task completed successfully",
-          completed_at: completionTime
-        })
-      } catch (dbError) {
-        console.error("Database update error:", dbError)
-        res.status(500).json({ message: "Failed to update task status" })
+        );
+        res.json({ message: "Static task completed", completed_at: completionTime });
       }
     }
   } catch (error) {
-    console.error("Complete task error:", error)
-    res.status(500).json({ message: "Server error" })
+    console.error("Complete task error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 })
 
@@ -1283,7 +1389,6 @@ app.get("/api/tasks/:id/details", authenticateToken, async (req, res) => {
     if (task.evidence_photo) {
       task.evidence_photo_url = `${req.protocol}://${req.get('host')}/uploads/evidence/${task.evidence_photo}`
     }
-
     res.json({ data: task })
   } catch (error) {
     console.error("Get task details error:", error)
@@ -1373,7 +1478,7 @@ app.put("/api/tasks/:id", authenticateToken, async (req, res) => {
         active_date = $9,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = $10 RETURNING *`,
-      [title, description, due_date, due_time, assigned_to, priority || 'medium', tag || 'static', recurrent !== false, active_date, taskId]
+      [title, description, due_date, due_time, assigned_to, priority || 'medium', tag || 'static', recurrent !== false, active_date || null, taskId]
     )
 
     if (result.rows.length === 0) {
@@ -1820,14 +1925,14 @@ app.delete("/api/events/:id", authenticateToken, async (req, res) => {
 app.get("/api/reports/stats", authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { start, end } = req.query
-    let where = " WHERE created_at >= CURRENT_DATE - INTERVAL '7 days' "
-    let params = []
+    let where = "th.completed_at >= CURRENT_DATE - INTERVAL '7 days'";
+    let params = [];
     if (start && end) {
-      where = " WHERE created_at BETWEEN $1 AND $2 "
-      params = [start, end]
+      where = "th.completed_at BETWEEN $1 AND $2";
+      params = [start, end];
     }
 
-    // Task completion rate over range with more detailed stats
+    // Use task_history for actual completed/archived tasks
     const completionResult = await pool.query(
       `SELECT 
         COUNT(*) as total_tasks,
@@ -1835,7 +1940,7 @@ app.get("/api/reports/stats", authenticateToken, requireAdmin, async (req, res) 
         COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_tasks,
         COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as in_progress_tasks,
         COUNT(CASE WHEN status = 'overdue' THEN 1 END) as overdue_tasks
-      FROM tasks ${where}`,
+      FROM task_history th WHERE ${where}`,
       params
     )
 
@@ -1848,24 +1953,22 @@ app.get("/api/reports/stats", authenticateToken, requireAdmin, async (req, res) 
     )
     const activeLivestock = Number.parseInt(livestockResult.rows[0].count)
 
-    // Calculate staff efficiency based on task completion rates
-    const staffEfficiencyResult = await pool.query(
-      `SELECT 
-        ROUND(AVG(CASE WHEN status = 'completed' THEN 100 ELSE 0 END), 1) as efficiency
-      FROM tasks 
-      WHERE assigned_to IS NOT NULL ${where.replace('created_at', 'due_date')}`,
-      params
-    )
+    // Calculate staff efficiency based on task completion rates in history
+    let staffEfficiencyWhere = "assigned_to IS NOT NULL";
+    const filter = where.replace("WHERE ", "").trim();
+    const staffEfficiencyQuery = filter
+      ? `SELECT ROUND(AVG(CASE WHEN status = 'completed' THEN 100 ELSE 0 END), 1) as efficiency FROM task_history th WHERE assigned_to IS NOT NULL AND ${filter}`
+      : `SELECT ROUND(AVG(CASE WHEN status = 'completed' THEN 100 ELSE 0 END), 1) as efficiency FROM task_history th WHERE assigned_to IS NOT NULL`;
+    const staffEfficiencyResult = await pool.query(staffEfficiencyQuery, params);
     const staffEfficiency = Number.parseFloat(staffEfficiencyResult.rows[0].efficiency) || 0
 
     // Calculate productivity score as monthly revenue placeholder
-    // This could be replaced with actual revenue data if available
     const productivityResult = await pool.query(
       `SELECT 
         COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed,
         COUNT(*) as total
-      FROM tasks 
-      WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'`
+      FROM task_history 
+      WHERE completed_at >= CURRENT_DATE - INTERVAL '30 days'`
     )
     const { completed: monthlyCompleted, total: monthlyTotal } = productivityResult.rows[0]
     const monthlyRevenue = monthlyTotal > 0 ? 
@@ -1894,25 +1997,27 @@ app.get("/api/reports/staff-performance", authenticateToken, requireAdmin, async
     let dateFilter = ""
     let params = []
     if (start && end) {
-      dateFilter = " AND t.created_at BETWEEN $1 AND $2 "
-      params = [start, end]
+        dateFilter = "th.completed_at BETWEEN $1 AND $2"
+        params = [start, end]
+      } else {
+        dateFilter = "th.completed_at >= CURRENT_DATE - INTERVAL '7 days'"
     }
 
-    const result = await pool.query(
-      `SELECT 
-        u.id,
-        u.full_name,
-        u.role,
-        COUNT(t.id) as tasks_completed,
-        ROUND(AVG(CASE WHEN t.status = 'completed' THEN 100 ELSE 0 END), 1) as efficiency
-      FROM users u
-      LEFT JOIN tasks t ON u.id = t.assigned_to ${dateFilter}
-      WHERE u.role != 'Admin User'
-      GROUP BY u.id, u.full_name, u.role
-      ORDER BY tasks_completed DESC
-      LIMIT 5`,
-      params
-    )
+      const result = await pool.query(
+        `SELECT 
+          u.id,
+          u.full_name,
+          u.role,
+          COUNT(th.id) as tasks_completed,
+          ROUND(AVG(CASE WHEN th.status = 'completed' THEN 100 ELSE 0 END), 1) as efficiency
+        FROM users u
+        LEFT JOIN task_history th ON u.id = th.assigned_to
+        WHERE u.role != 'Admin User' AND ${dateFilter}
+        GROUP BY u.id, u.full_name, u.role
+        ORDER BY tasks_completed DESC
+        LIMIT 5`,
+        params
+      )
 
     res.json(result.rows)
   } catch (error) {
@@ -1928,20 +2033,25 @@ app.get("/api/reports/task-distribution", authenticateToken, requireAdmin, async
     let dateFilter = ""
     let params = []
     if (start && end) {
-      dateFilter = " WHERE created_at BETWEEN $1 AND $2 "
+      dateFilter = " WHERE th.completed_at BETWEEN $1 AND $2 "
       params = [start, end]
+    } else {
+      dateFilter = " WHERE th.completed_at >= CURRENT_DATE - INTERVAL '7 days' "
     }
 
-    const result = await pool.query(
-      `SELECT 
-        COALESCE(tag, 'other') as category,
-        COUNT(*) as count,
-        ROUND((COUNT(*) * 100.0 / SUM(COUNT(*)) OVER()), 1) as percentage
-      FROM tasks ${dateFilter}
-      GROUP BY tag
-      ORDER BY count DESC`,
-      params
-    )
+      // Join with tasks to get the original tag
+      const result = await pool.query(
+        `SELECT 
+          COALESCE(t.tag, 'other') as category,
+          COUNT(*) as count,
+          ROUND((COUNT(*) * 100.0 / SUM(COUNT(*)) OVER()), 1) as percentage
+        FROM task_history th
+        LEFT JOIN tasks t ON th.original_task_id = t.id
+        ${dateFilter}
+        GROUP BY t.tag
+        ORDER BY count DESC`,
+        params
+      )
 
     // If no data, return default structure
     if (result.rows.length === 0) {
@@ -2114,12 +2224,12 @@ app.get('/api/reports/export', authenticateToken, requireAdmin, async (req, res)
       ["StaffEfficiency","91.2%"],
       ["MonthlyRevenue","$22.8k"],
     ]
-    if (start || end) {
-      lines.push(["Start", start || ""])
-      lines.push(["End", end || ""])
+    if (start && end) {
+      dateFilter = " WHERE th.completed_at BETWEEN $1 AND $2 "
+      params = [start, end]
+    } else {
+      dateFilter = " WHERE th.completed_at >= CURRENT_DATE - INTERVAL '7 days' "
     }
-    const csv = lines.map(r => r.join(',')).join('\n')
-    res.setHeader('Content-Type', 'text/csv')
     res.setHeader('Content-Disposition', 'attachment; filename=report.csv')
     res.send(csv)
   } catch (error) {
@@ -2131,7 +2241,7 @@ app.get('/api/reports/export', authenticateToken, requireAdmin, async (req, res)
 // Users routes
 app.get("/api/users", authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query("SELECT id, full_name, email, role, phone FROM users ORDER BY full_name")
+    const result = await pool.query("SELECT id, full_name, email, role, phone , created_at FROM users ORDER BY full_name")
     res.json(result.rows)
   } catch (error) {
     console.error("Get users error:", error)
@@ -2923,10 +3033,8 @@ app.get('/health', (req, res) => {
 
 // Graceful shutdown handling
 process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully');
   try {
     await pool.end();
-    console.log('Database pool closed');
     process.exit(0);
   } catch (err) {
     console.error('Error during shutdown:', err);
@@ -2935,10 +3043,8 @@ process.on('SIGTERM', async () => {
 });
 
 process.on('SIGINT', async () => {
-  console.log('SIGINT received, shutting down gracefully');
   try {
     await pool.end();
-    console.log('Database pool closed');
     process.exit(0);
   } catch (err) {
     console.error('Error during shutdown:', err);
@@ -3382,38 +3488,6 @@ app.delete("/api/farm-resources/:id", authenticateToken, async (req, res) => {
 })
 
 // External Users API endpoints
-// Create external users table if it doesn't exist
-const createExternalUsersTable = async () => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS external_users (
-        id SERIAL PRIMARY KEY,
-        full_name VARCHAR(255) NOT NULL,
-        company_name VARCHAR(255),
-        email VARCHAR(255),
-        phone VARCHAR(20),
-        role VARCHAR(50) NOT NULL DEFAULT 'Supplier',
-        specialization TEXT,
-        contact_person VARCHAR(255),
-        address TEXT,
-        city VARCHAR(100),
-        state VARCHAR(100),
-        country VARCHAR(100) DEFAULT 'Nigeria',
-        rating DECIMAL(2,1) DEFAULT 0.0,
-        verified BOOLEAN DEFAULT false,
-        notes TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `)
-    console.log('External users table created/verified successfully')
-  } catch (error) {
-    console.error('Error creating external users table:', error)
-  }
-}
-
-// Call the function to create table
-createExternalUsersTable()
 
 // Get all external users
 app.get("/api/external-users", authenticateToken, async (req, res) => {
@@ -3450,26 +3524,19 @@ app.post("/api/external-users", authenticateToken, async (req, res) => {
       return res.status(403).json({ message: "You do not have permission to create external users" })
     }
 
-    const { 
-      full_name, 
-      company_name, 
-      email, 
-      phone, 
-      role, 
-      specialization, 
-      contact_person, 
-      address, 
-      city, 
-      state, 
-      country, 
-      notes 
+    const {
+      full_name,
+      company_name,
+      email,
+      phone,
+      role,
+      address
     } = req.body
 
     // Validation
     if (!full_name) {
       return res.status(400).json({ message: "Full name is required" })
     }
-
     if (!role) {
       return res.status(400).json({ message: "Role is required" })
     }
@@ -3477,7 +3544,6 @@ app.post("/api/external-users", authenticateToken, async (req, res) => {
     // Check if external user exists (by email if provided, otherwise by name and company)
     let existingUserQuery
     let existingUserParams
-    
     if (email) {
       existingUserQuery = "SELECT * FROM external_users WHERE email = $1"
       existingUserParams = [email]
@@ -3485,19 +3551,25 @@ app.post("/api/external-users", authenticateToken, async (req, res) => {
       existingUserQuery = "SELECT * FROM external_users WHERE full_name = $1 AND company_name = $2"
       existingUserParams = [full_name, company_name || null]
     }
-
     const existingUser = await pool.query(existingUserQuery, existingUserParams)
     if (existingUser.rows.length > 0) {
       return res.status(400).json({ message: "External user already exists" })
     }
 
-    // Create external user
+    // Only use fields present in frontend form, make company_name and address optional
     const result = await pool.query(
       `INSERT INTO external_users 
-       (full_name, company_name, email, phone, role, specialization, contact_person, address, city, state, country, notes) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) 
+       (full_name, company_name, email, phone, role, address) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
        RETURNING *`,
-      [full_name, company_name, email, phone, role, specialization, contact_person, address, city, state, country || 'Nigeria', notes]
+      [
+        full_name,
+        company_name || null,
+        email || null,
+        phone || null,
+        role,
+        address || null
+      ]
     )
 
     res.status(201).json(result.rows[0])
@@ -3590,5 +3662,4 @@ app.delete("/api/external-users/:id", authenticateToken, async (req, res) => {
 
 // Start server
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`)
 })

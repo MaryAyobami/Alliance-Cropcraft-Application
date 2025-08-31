@@ -35,12 +35,21 @@ const EditTaskForm = ({ task, onTaskUpdated, onCancel }) => {
 
   useEffect(() => {
     if (task) {
+        
+    // Convert due_date to YYYY-MM-DD format for input[type="date"]
+    let formattedDueDate = ""
+    if (task.due_date) {
+      const d = new Date(task.due_date)
+      if (!isNaN(d.getTime())) {
+        formattedDueDate = d.toISOString().slice(0, 10)
+      }
+    }
       setFormData({
         title: task.title || "",
         description: task.description || "",
         priority: task.priority || "medium",
         assigned_to: task.assigned_to || "",
-        due_date: task.due_date || "",
+        due_date: formattedDueDate || "",
         due_time: task.due_time || "",
         tag: task.tag || "static",         
         recurrent: task.recurrent !== false,       

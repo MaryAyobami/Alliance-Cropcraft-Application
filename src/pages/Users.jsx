@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "../contexts/AuthContext"
-import { userAPI } from "../services/api"
+import { userAPI, externalUsersAPI } from "../services/api"
 import UserForm from "../components/UserForm"
 import ExternalUserForm from "../components/ExternalUserForm"
 import { 
@@ -22,9 +22,11 @@ import {
 
 const Users = () => {
   const { user } = useAuth()
-  const [users, setUsers] = useState([])
+  const [staffUsers, setStaffUsers] = useState([])
+  const [externalUsers, setExternalUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [filterRole, setFilterRole] = useState("")
   const [filterCategory, setFilterCategory] = useState("all") // all, staff, external
@@ -39,21 +41,36 @@ const Users = () => {
 
   // Categorize users
   const staffRoles = ["Admin", "Farm Manager", "Farm Attendant", "Pasture Officer", "Veterinary Doctor", "Feed Production Officer"]
-  const externalRoles = ["Vendor", "Contractor", "Visitor", "Other"]
+  const externalRoles = ["vendor", "contractor", "visitor", "other", "Vendor", "Contractor", "Visitor", "Other"]
 
   useEffect(() => {
-    fetchUsers()
+    fetchStaffUsers()
+    fetchExternalUsers()
   }, [])
 
-  const fetchUsers = async () => {
+  const fetchStaffUsers = async () => {
     try {
       setLoading(true)
-      const response = await userAPI.getUsers()
-      setUsers(response.data)
+      const staffRes = await userAPI.getUsers()
+      setStaffUsers(staffRes.data)
       setError("")
     } catch (error) {
-      console.error("Failed to fetch users:", error)
-      setError("Failed to load users. Please try again.")
+      console.error("Failed to fetch staff users:", error)
+      setError("Failed to load staff users. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchExternalUsers = async () => {
+    try {
+      setLoading(true)
+      const externalRes = await externalUsersAPI.getExternalUsers()
+      setExternalUsers(externalRes.data)
+      setError("")
+    } catch (error) {
+      console.error("Failed to fetch external users:", error)
+      setError("Failed to load external users. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -63,22 +80,21 @@ const Users = () => {
     return staffRoles.includes(userRole) ? "staff" : "external"
   }
 
-  const filteredUsers = users.filter(u => {
+  const filteredStaff = staffUsers.filter(u => {
     const matchesSearch = u.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          u.phone?.includes(searchTerm)
-    
     const matchesRole = !filterRole || u.role === filterRole
-    
-    const matchesCategory = filterCategory === "all" || 
-                          (filterCategory === "staff" && staffRoles.includes(u.role)) ||
-                          (filterCategory === "external" && externalRoles.includes(u.role))
-
-    return matchesSearch && matchesRole && matchesCategory
+    return matchesSearch && matchesRole
   })
 
-  const activeStaff = filteredUsers.filter(u => staffRoles.includes(u.role))
-  const externalUsers = filteredUsers.filter(u => externalRoles.includes(u.role))
+  const filteredExternal = externalUsers.filter(u => {
+    const matchesSearch = u.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         u.phone?.includes(searchTerm)
+    const matchesRole = !filterRole || u.role === filterRole
+    return matchesSearch && matchesRole
+  })
 
   const getRoleBadgeColor = (role) => {
     const roleColors = {
@@ -109,35 +125,42 @@ const Users = () => {
 
   const handleEdit = (userToEdit) => {
     if (!canManageUsers) return
-    setModalMode("edit")
-    setSelectedUser(userToEdit)
-    setShowModal(true)
+    if (categorizeUser(userToEdit.role) === "external") {
+      setExternalModalMode("edit")
+      setSelectedUser(userToEdit)
+      setShowExternalModal(true)
+    } else {
+      setModalMode("edit")
+      setSelectedUser(userToEdit)
+      setShowModal(true)
+    }
   }
 
   const handleView = (userToView) => {
-    setModalMode("view")
-    setSelectedUser(userToView)
-    setShowModal(true)
+    if (categorizeUser(userToView.role) === "external") {
+      setExternalModalMode("view")
+      setSelectedUser(userToView)
+      setShowExternalModal(true)
+    } else {
+      setModalMode("view")
+      setSelectedUser(userToView)
+      setShowModal(true)
+    }
   }
 
   const handleUserSaved = (savedUser) => {
-    if (modalMode === "create") {
-      setUsers([...users, savedUser])
-    } else if (modalMode === "edit") {
-      setUsers(users.map(u => u.id === savedUser.id ? savedUser : u))
-    }
+    fetchStaffUsers()
     setShowModal(false)
     setSelectedUser(null)
   }
 
   const handleExternalUserSaved = (savedUser) => {
-    if (externalModalMode === "create") {
-      setUsers([...users, savedUser])
-    } else if (externalModalMode === "edit") {
-      setUsers(users.map(u => u.id === savedUser.id ? savedUser : u))
-    }
+    fetchExternalUsers()
     setShowExternalModal(false)
     setSelectedUser(null)
+    setError("")
+    setSuccess(externalModalMode === "create" ? "External user added successfully." : "External user updated successfully.")
+    setTimeout(() => setSuccess(""), 3000)
   }
 
   if (loading) {
@@ -180,6 +203,11 @@ const Users = () => {
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
           {error}
+        </div>
+      )}
+      {success && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl">
+          {success}
         </div>
       )}
 
@@ -229,8 +257,8 @@ const Users = () => {
 
           <div className="flex items-end">
             <div className="text-sm text-gray-600">
-              <p className="font-medium">Total: {filteredUsers.length}</p>
-              <p>Staff: {activeStaff.length} | External: {externalUsers.length}</p>
+          <p className="font-medium">Total: {filteredStaff.length + filteredExternal.length}</p>
+          <p>Staff: {filteredStaff.length} | External: {filteredExternal.length}</p>
             </div>
           </div>
         </div>
@@ -244,14 +272,14 @@ const Users = () => {
               <UserCheck className="w-5 h-5 text-green-600" />
               <h2 className="text-xl font-semibold text-gray-900">Active Staff</h2>
               <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-sm font-medium">
-                {activeStaff.length}
+                {filteredStaff.length}
               </span>
             </div>
             <p className="text-gray-600 mt-1">Farm employees and staff members</p>
           </div>
 
           <div className="p-6">
-            {activeStaff.length === 0 ? (
+            {filteredStaff.length === 0 ? (
               <div className="text-center py-8">
                 <UsersIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No staff found</h3>
@@ -259,7 +287,7 @@ const Users = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {activeStaff.map((staffUser) => (
+                {filteredStaff.map((staffUser) => (
                   <div key={staffUser.id} className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
@@ -283,7 +311,7 @@ const Users = () => {
                       )}
                       <div className="flex items-center space-x-2 text-sm text-gray-600">
                         <Calendar className="w-4 h-4" />
-                        <span>Joined {new Date(staffUser.created_at).toLocaleDateString()}</span>
+                        <span>Joined {staffUser.created_at && !isNaN(Date.parse(staffUser.created_at)) ? new Date(staffUser.created_at).toLocaleDateString() : "Not available"}</span>
                       </div>
                     </div>
 
@@ -322,14 +350,14 @@ const Users = () => {
               <UserX className="w-5 h-5 text-orange-600" />
               <h2 className="text-xl font-semibold text-gray-900">External Users</h2>
               <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-sm font-medium">
-                {externalUsers.length}
+                {filteredExternal.length}
               </span>
             </div>
             <p className="text-gray-600 mt-1">Vendors, contractors, and other external contacts</p>
           </div>
 
           <div className="p-6">
-            {externalUsers.length === 0 ? (
+            {filteredExternal.length === 0 ? (
               <div className="text-center py-8">
                 <UsersIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No external users found</h3>
@@ -337,7 +365,7 @@ const Users = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {externalUsers.map((externalUser) => (
+                {filteredExternal.map((externalUser) => (
                   <div key={externalUser.id} className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
@@ -361,7 +389,7 @@ const Users = () => {
                       )}
                       <div className="flex items-center space-x-2 text-sm text-gray-600">
                         <Calendar className="w-4 h-4" />
-                        <span>Added {new Date(externalUser.created_at).toLocaleDateString()}</span>
+                        <span>Added {externalUser.created_at && !isNaN(Date.parse(externalUser.created_at)) ? new Date(externalUser.created_at).toLocaleDateString() : "Not available"}</span>
                       </div>
                     </div>
 
@@ -439,7 +467,7 @@ const Users = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Joined Date</label>
                     <p className="mt-1 text-sm text-gray-900">
-                      {new Date(selectedUser.created_at).toLocaleDateString()}
+                      {selectedUser.created_at && !isNaN(Date.parse(selectedUser.created_at)) ? new Date(selectedUser.created_at).toLocaleDateString() : "Not available"}
                     </p>
                   </div>
                 </div>
@@ -451,17 +479,6 @@ const Users = () => {
                 onUserSaved={handleUserSaved}
                 onCancel={() => setShowModal(false)}
               />
-            )}
-
-            {modalMode === "view" && (
-              <div className="flex justify-end space-x-3 mt-6">
-                <button 
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
-                >
-                  Close
-                </button>
-              </div>
             )}
           </div>
         </div>
@@ -484,12 +501,51 @@ const Users = () => {
               </button>
             </div>
 
-            <ExternalUserForm
-              user={selectedUser}
-              mode={externalModalMode}
-              onUserSaved={handleExternalUserSaved}
-              onCancel={() => setShowExternalModal(false)}
-            />
+            {externalModalMode === "view" && selectedUser ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Full Name</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedUser.full_name}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Role</label>
+                    <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full border ${getRoleBadgeColor(selectedUser.role)}`}>
+                      {selectedUser.role}
+                    </span>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Email</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedUser.email}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Phone</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedUser.phone || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Company Name</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedUser.company_name || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Address</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedUser.address || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Joined Date</label>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {selectedUser.created_at && !isNaN(Date.parse(selectedUser.created_at)) ? new Date(selectedUser.created_at).toLocaleDateString() : "Not available"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <ExternalUserForm
+                user={selectedUser}
+                mode={externalModalMode}
+                onUserSaved={handleExternalUserSaved}
+                onCancel={() => setShowExternalModal(false)}
+              />
+            )}
           </div>
         </div>
       )}
