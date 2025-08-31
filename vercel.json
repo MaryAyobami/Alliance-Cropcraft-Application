@@ -37,11 +37,7 @@
       ]
     }
   ],
-  "functions": {
-    "src/api/health.js": {
-      "maxDuration": 30
-    }
-  },
+  
   "env": {
     "VITE_APP_NAME": "Alliance CropCraft",
     "VITE_APP_VERSION": "1.0.0"
