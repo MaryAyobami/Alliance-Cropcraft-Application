@@ -38,7 +38,7 @@ const Profile = () => {
       // Fetch notification preferences
       // If your backend returns them in profile, use them directly
       setNotifications({
-        push: profileRes.data.notif_push ?? true,
+        push: profileRes.data.notif_push ?? false, // Disabled by default
         email: profileRes.data.notif_email ?? true,
         morningTime: profileRes.data.notif_morning ?? "08:00",
         eveningTime: profileRes.data.notif_evening ?? "18:00"
@@ -109,6 +109,10 @@ const Profile = () => {
 }
   const handleNotificationsChange = (e) => {
     const { name, value, type, checked } = e.target
+    // If enabling push, prompt for subscription
+    if (name === "push" && checked) {
+      enablePushNotifications()
+    }
     setNotifications({
       ...notifications,
       [name]: type === "checkbox" ? checked : value
@@ -472,6 +476,13 @@ const handleSaveNotifications = async () => {
                     <Check className="w-5 h-5" />
                   )}
                   <span>{loading ? "Saving..." : "Save Settings"}</span>
+                </button>
+                <button
+                  onClick={enablePushNotifications}
+                  className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white rounded-xl transition-all duration-200 hover:scale-105 shadow-lg"
+                >
+                  <Bell className="w-5 h-5" />
+                  <span>Subscribe to Push</span>
                 </button>
                 <button
                   onClick={() => setShowNotifications(false)}
