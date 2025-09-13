@@ -124,4 +124,94 @@ export const externalUsersAPI = {
 export const subscribePush = (subscription) =>
   api.post("/notifications/subscribe", subscription)
 
+// ============================================================================
+// NEW API ENDPOINTS FOR ALLIANCE CROPCRAFT SIMPLIFIED SPEC
+// ============================================================================
+
+// Pen Management API
+export const penAPI = {
+  getPens: () => api.get("/pens"),
+  getPenById: (id) => api.get(`/pens/${id}`),
+  createPen: (penData) => api.post("/pens", penData),
+  updatePen: (id, penData) => api.put(`/pens/${id}`, penData),
+  deletePen: (id) => api.delete(`/pens/${id}`),
+  getPenAssignments: () => api.get("/pen-assignments"),
+  createPenAssignment: (assignmentData) => api.post("/pen-assignments", assignmentData),
+  updatePenAssignment: (id, assignmentData) => api.put(`/pen-assignments/${id}`, assignmentData),
+}
+
+// Weight Records API
+export const weightAPI = {
+  getWeightRecords: (animalId) => api.get(`/weight-records${animalId ? `?animal_id=${animalId}` : ''}`),
+  createWeightRecord: (weightData) => api.post("/weight-records", weightData),
+  updateWeightRecord: (id, weightData) => api.put(`/weight-records/${id}`, weightData),
+  deleteWeightRecord: (id) => api.delete(`/weight-records/${id}`),
+}
+
+// Breeding Management API
+export const breedingAPI = {
+  getBreedingEvents: () => api.get("/breeding-events"),
+  createBreedingEvent: (eventData) => api.post("/breeding-events", eventData),
+  getPregnancyChecks: (breedingEventId) => api.get(`/pregnancy-checks${breedingEventId ? `?breeding_event_id=${breedingEventId}` : ''}`),
+  createPregnancyCheck: (checkData) => api.post("/pregnancy-checks", checkData),
+  getBirths: () => api.get("/births"),
+  createBirth: (birthData) => api.post("/births", birthData),
+  getOffspring: (birthId) => api.get(`/offspring${birthId ? `?birth_id=${birthId}` : ''}`),
+}
+
+// Health Management API (Enhanced)
+export const healthAPI = {
+  getVaccinations: (animalId) => api.get(`/vaccinations${animalId ? `?animal_id=${animalId}` : ''}`),
+  createVaccination: (vaccinationData) => api.post("/vaccinations", vaccinationData),
+  getTreatments: (animalId) => api.get(`/treatments${animalId ? `?animal_id=${animalId}` : ''}`),
+  createTreatment: (treatmentData) => api.post("/treatments", treatmentData),
+  getMortalities: () => api.get("/mortalities"),
+  createMortality: (mortalityData) => api.post("/mortalities", mortalityData),
+  getHealthSummary: (animalId) => api.get(`/health-summary${animalId ? `/${animalId}` : ''}`),
+  getVaccinationsDue: () => api.get("/vaccinations/due"),
+}
+
+// Feed Management API
+export const feedAPI = {
+  getRations: (penId) => api.get(`/feed-rations${penId ? `?pen_id=${penId}` : ''}`),
+  createRation: (rationData) => api.post("/feed-rations", rationData),
+  updateRation: (id, rationData) => api.put(`/feed-rations/${id}`, rationData),
+  getFeedInventory: () => api.get("/feed-inventory"),
+  updateInventory: (id, inventoryData) => api.put(`/feed-inventory/${id}`, inventoryData),
+  getFeedLogs: (penId, date) => api.get(`/feed-logs${penId ? `?pen_id=${penId}` : ''}${date ? `&date=${date}` : ''}`),
+  createFeedLog: (feedLogData) => api.post("/feed-logs", feedLogData),
+  updateFeedLog: (id, feedLogData) => api.put(`/feed-logs/${id}`, feedLogData),
+}
+
+// Investor Management API
+export const investorAPI = {
+  getInvestors: () => api.get("/investors"),
+  getInvestorById: (id) => api.get(`/investors/${id}`),
+  createInvestor: (investorData) => api.post("/investors", investorData),
+  updateInvestor: (id, investorData) => api.put(`/investors/${id}`, investorData),
+  getInvestorAllocations: (investorId) => api.get(`/investor-allocations${investorId ? `?investor_id=${investorId}` : ''}`),
+  createAllocation: (allocationData) => api.post("/investor-allocations", allocationData),
+  getInvestorDashboard: (investorId) => api.get(`/investor-dashboard/${investorId}`),
+  getInvestorKPIs: (investorId, params) => api.get(`/investor-kpis/${investorId}`, { params }),
+}
+
+// Notifications API
+export const notificationsAPI = {
+  getNotifications: (userId) => api.get(`/notifications${userId ? `?user_id=${userId}` : ''}`),
+  markAsRead: (id) => api.put(`/notifications/${id}/read`),
+  createNotification: (notificationData) => api.post("/notifications", notificationData),
+  deleteNotification: (id) => api.delete(`/notifications/${id}`),
+}
+
+// Enhanced Reports API for new roles
+export const enhancedReportsAPI = {
+  getSupervisorReports: (supervisorId, params) => api.get(`/reports/supervisor/${supervisorId}`, { params }),
+  getInvestorReports: (investorId, params) => api.get(`/reports/investor/${investorId}`, { params }),
+  getHealthCoverageReport: (params) => api.get("/reports/health-coverage", { params }),
+  getMortalityReport: (params) => api.get("/reports/mortality", { params }),
+  getBreedingReport: (params) => api.get("/reports/breeding", { params }),
+  getFeedEfficiencyReport: (params) => api.get("/reports/feed-efficiency", { params }),
+  exportReport: (reportType, params) => api.get(`/reports/export/${reportType}`, { params, responseType: "blob" }),
+}
+
 export default api

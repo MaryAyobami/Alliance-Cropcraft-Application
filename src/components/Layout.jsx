@@ -18,6 +18,7 @@ import {
   Sprout,
   ChevronDown,
   ChevronRight,
+  TrendingUp,
 } from "lucide-react"
 import { useState } from "react"
 
@@ -120,7 +121,8 @@ const Layout = ({ children }) => {
 		// { name: "Farm Map", href: "/farm-map", icon: Map },
 		{ name: "Planting Tracker", href: "/planting-tracker", icon: Sprout },
 		{ name: "Users", href: "/users", icon: Users },
-		...(user?.role === "Admin" || user?.role === "Farm Manager" ? [{ name: "Reports", href: "/reports", icon: BarChart3 }] : []),
+		...(["Admin", "Farm Manager", "Supervisor"].includes(user?.role) ? [{ name: "Reports", href: "/reports", icon: BarChart3 }] : []),
+		...(user?.role === "Investor" ? [{ name: "Investor Dashboard", href: "/investor-dashboard", icon: TrendingUp }] : []),
 	];
 
   return (

@@ -22,6 +22,7 @@ import PlantingTracker from "./pages/PlantingTracker"
 import PWAInstallPrompt from "./components/PWAInstallPrompt"
 import Settings from "./pages/Settings"
 import RegistrationSuccessful from "./pages/RegistrationSuccessful"
+import InvestorDashboard from "./pages/InvestorDashboard"
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth()
@@ -61,7 +62,7 @@ const AdminRoute = ({ children }) => {
     )
   }
   if (!user) return <Navigate to="/login" />
-  return (user.role === "Admin" || user.role === "Admin User") ? children : <Navigate to="/dashboard" />
+  return (user.role === "Admin" || user.role === "Admin User" || user.role === "Farm Manager") ? children : <Navigate to="/dashboard" />
 }
 
 function App() {
@@ -266,6 +267,16 @@ function App() {
                     <Reports />
                   </Layout>
                 </AdminRoute>
+              </ProtectedRoute>
+            }
+           />
+           <Route
+            path="/investor-dashboard"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <InvestorDashboard />
+                </Layout>
               </ProtectedRoute>
             }
            />

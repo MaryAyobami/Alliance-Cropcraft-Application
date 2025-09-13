@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react"
 import { authAPI } from "../services/api"
+import { initOfflineSync, cacheData } from "../services/offlineSync"
 
 const AuthContext = createContext()
 
@@ -65,10 +66,20 @@ export const AuthProvider = ({ children }) => {
     return () => clearInterval(tokenCheckInterval)
   }, [isTokenExpired, forceLogout])
 
-  const login = (token, userData) => {
+  const login = async (token, userData) => {
     localStorage.setItem("token", token)
     localStorage.setItem("user", JSON.stringify(userData))
     setUser(userData)
+    
+    // Initialize offline sync system on login
+    try {
+      await initOfflineSync()
+      // Cache user data for offline access
+      await cacheData.users(userData)
+      console.log('[AuthContext] Offline sync initialized')
+    } catch (error) {
+      console.error('[AuthContext] Failed to initialize offline sync:', error)
+    }
   }
 
   const logout = (force = false) => {
