@@ -3485,66 +3485,6 @@ app.delete("/api/external-users/:id", authenticateToken, async (req, res) => {
   }
 })
 
-// ============================================================================
-// ENHANCED API ROUTES FOR ALLIANCE CROPCRAFT SIMPLIFIED SPEC
-// ============================================================================
-
-// Import new route modules
-const pensRouter = require('./routes/pens');
-const weightsRouter = require('./routes/weights');
-const breedingRouter = require('./routes/breeding');
-const healthRouter = require('./routes/health');
-const investorsRouter = require('./routes/investors');
-const feedRouter = require('./routes/feed');
-const notificationsRouter = require('./routes/notifications');
-const enhancedReportsRouter = require('./routes/reports');
-
-// Mount new routes
-app.use('/api/pens', pensRouter);
-app.use('/api/pen-assignments', pensRouter); // Pen assignments are handled in pens router
-app.use('/api/weight-records', weightsRouter);
-app.use('/api/breeding', breedingRouter); // All breeding routes under /breeding
-app.use('/api/health', healthRouter); // All health routes under /health  
-app.use('/api/investors', investorsRouter);
-app.use('/api/feed', feedRouter); // All feed routes under /feed
-app.use('/api/notifications', notificationsRouter);
-app.use('/api/reports', enhancedReportsRouter); // Enhanced reports under existing /reports
-
-// Enhanced role checking middleware for new roles
-const requireEnhancedRole = (roles) => {
-  return (req, res, next) => {
-    const userRole = req.user?.role;
-    const allowedRoles = Array.isArray(roles) ? roles : [roles];
-    
-    if (allowedRoles.includes(userRole)) {
-      return next();
-    }
-    
-    return res.status(403).json({
-      success: false,
-      message: `Access denied. Required roles: ${allowedRoles.join(', ')}`
-    });
-  };
-};
-
-// Add enhanced role middleware to app for use in existing routes
-app.requireEnhancedRole = requireEnhancedRole;
-
-console.log('✅ Enhanced API routes loaded successfully');
-console.log('📊 Available enhanced endpoints:');
-console.log('   - Pen Management: /api/pens');
-console.log('   - Weight Tracking: /api/weight-records');
-console.log('   - Breeding Management: /api/breeding-events, /api/pregnancy-checks, /api/births');
-console.log('   - Enhanced Health: /api/vaccinations, /api/treatments, /api/mortalities');
-console.log('   - Feed Management: /api/feed-rations, /api/feed-logs, /api/feed-inventory');
-console.log('   - Investor Management: /api/investors, /api/investor-dashboard');
-console.log('   - Notifications: /api/notifications');
-console.log('   - Enhanced Reports: /api/enhanced-reports');
-
 // Start server
 app.listen(port, () => {
-  console.log(`🚀 Alliance CropCraft Backend Server running on port ${port}`);
-  console.log(`📱 Frontend should connect to: http://localhost:${port}/api`);
-  console.log(`🔒 JWT Secret: ${process.env.JWT_SECRET ? 'Configured' : 'Using default (change in production)'}`);
-  console.log(`💾 Database: ${process.env.DATABASE_URL ? 'Connected via DATABASE_URL' : 'Using default connection'}`);
 })

@@ -114,6 +114,9 @@ const Layout = ({ children }) => {
 			submenu: [
 				{ name: "Overview", href: "/livestock", icon: Activity },
 				{ name: "Health", href: "/livestock/health", icon: Heart },
+				{ name: "Pens", href: "/pen-management", icon: Package },
+				{ name: "Weight Tracking", href: "/weight-tracking", icon: TrendingUp },
+				{ name: "Breeding", href: "/breeding-management", icon: Heart },
 			]
 		},
 		{ name: "Farm Resources", href: "/farm-resources", icon: Package },
