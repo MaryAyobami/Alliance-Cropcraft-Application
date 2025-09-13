@@ -25,7 +25,17 @@ const Register = () => {
   const { login } = useAuth()
   const navigate = useNavigate()
 
-  const roles = ["Farm Attendant", "Veterinary Doctor", "Pasture Officer", "Admin", "Farm Manager", "Maintenance Officer", "Feed Production Officer"]
+  const roles = [
+    "Farm Attendant", 
+    "Veterinary Doctor", 
+    "Pasture Officer", 
+    "Admin", 
+    "Farm Manager", 
+    "Maintenance Officer", 
+    "Feed Production Officer",
+    "Supervisor",  // New role for approving logs and BCS
+    "Investor"     // New role for read-only KPI access
+  ]
 
   // Auto-scroll to error when error changes
   useEffect(() => {

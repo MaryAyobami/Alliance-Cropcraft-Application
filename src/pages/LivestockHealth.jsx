@@ -36,8 +36,8 @@ const LivestockHealth = () => {
   const [selectedAnimal, setSelectedAnimal] = useState("")
 
   // Role-based permissions
-  const canManageHealth = ["Admin", "Farm Manager", "Veterinary Doctor"].includes(user?.role)
-  const canDeleteRecords = ["Admin", "Farm Manager"].includes(user?.role)
+  const canManageHealth = ["Admin", "Farm Manager", "Veterinary Doctor", "Supervisor"].includes(user?.role)
+  const canDeleteRecords = ["Admin", "Farm Manager", "Supervisor"].includes(user?.role)
 
   useEffect(() => {
     fetchLivestock()

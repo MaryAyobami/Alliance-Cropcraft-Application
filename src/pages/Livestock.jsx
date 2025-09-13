@@ -52,7 +52,7 @@ const Livestock = () => {
 
   // Role-based permissions
   const canCreate = ["Admin", "Farm Manager"].includes(user?.role)
-  const canUpdate = ["Admin", "Farm Manager", "Veterinary Doctor"].includes(user?.role)
+  const canUpdate = ["Admin", "Farm Manager", "Veterinary Doctor", "Supervisor"].includes(user?.role)
   const canDelete = ["Admin", "Farm Manager"].includes(user?.role)
 
   useEffect(() => {
