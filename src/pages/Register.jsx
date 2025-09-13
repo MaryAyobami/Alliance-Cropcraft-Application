@@ -109,7 +109,7 @@ const Register = () => {
       if (response.data.verification_required) {
         // Store email for verification page
         localStorage.setItem('pendingVerificationEmail', response.data.user.email)
-        navigate("/verify-email", { 
+        navigate("/registration-successful", { 
           state: { 
             message: response.data.message,
             email: response.data.user.email 

@@ -107,7 +107,7 @@ const Layout = ({ children }) => {
       { name: "Task History", href: "/task-history", icon: Calendar },
     ]
   },
-		// { name: "Calendar", href: "/calendar", icon: Calendar },
+		{ name: "Calendar", href: "/calendar", icon: Calendar },
 		{ 
 			name: "Livestock", 
 			icon: Activity,

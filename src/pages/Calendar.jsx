@@ -222,17 +222,17 @@ const Calendar = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Calendar</h1>
-          <p className="text-gray-600 mt-1">Schedule and manage farm tasks and events</p>
+          <p className="text-gray-600 mt-1">Schedule and manage farm events and meetings</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <select className="border border-gray-300 rounded-xl px-3 py-2 text-sm">
+          {/* <select className="border border-gray-300 rounded-xl px-3 py-2 text-sm">
             <option>All</option>
-          </select>
-          <button onClick={() => setShowModal(true)} className="btn-primary text-sm flex items-center space-x-2">
+          </select> */}
+          <a target="_blank" rel="noopener noreferrer" href='https://mx4125.usc1.mymailhosting.com/interface/root#/popout/appointment/new' className="btn-primary text-sm flex items-center space-x-2">
             <Plus className="w-4 h-4" />
             <span>Add Event</span>
-          </button>
+          </a>
         </div>
       </div>
 
@@ -328,7 +328,7 @@ const Calendar = () => {
         </div>
 
         {/* Upcoming Events Sidebar */}
-        <div className="space-y-6">
+        {/* <div className="space-y-6">
           <div className="card">
             <h3 className="font-semibold text-gray-900 mb-4">Upcoming Events</h3>
             <p className="text-sm text-primary-600 mb-4">Next 5 scheduled events</p>
@@ -352,7 +352,7 @@ const Calendar = () => {
               )}
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Create Event Modal */}

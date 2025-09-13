@@ -21,6 +21,7 @@ import FarmMap from "./pages/FarmMap"
 import PlantingTracker from "./pages/PlantingTracker"
 import PWAInstallPrompt from "./components/PWAInstallPrompt"
 import Settings from "./pages/Settings"
+import RegistrationSuccessful from "./pages/RegistrationSuccessful"
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth()
@@ -115,6 +116,14 @@ function App() {
             element={
               <PublicRoute>
                 <VerifyEmail />
+              </PublicRoute>
+            }
+          />
+            <Route
+            path="/registration-successful"
+            element={
+              <PublicRoute>
+                <RegistrationSuccessful />
               </PublicRoute>
             }
           />
