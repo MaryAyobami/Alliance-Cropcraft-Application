@@ -22,6 +22,10 @@ import PlantingTracker from "./pages/PlantingTracker"
 import PWAInstallPrompt from "./components/PWAInstallPrompt"
 import Settings from "./pages/Settings"
 import RegistrationSuccessful from "./pages/RegistrationSuccessful"
+import InvestorDashboard from "./pages/InvestorDashboard"
+import PenManagementPage from "./pages/PenManagement"
+import WeightTrackingPage from "./pages/WeightTracking"
+import BreedingManagementPage from "./pages/BreedingManagement"
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth()
@@ -266,6 +270,46 @@ function App() {
                     <Reports />
                   </Layout>
                 </AdminRoute>
+              </ProtectedRoute>
+            }
+           />
+           <Route
+            path="/investor-dashboard"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <InvestorDashboard />
+                </Layout>
+              </ProtectedRoute>
+            }
+           />
+           <Route
+            path="/pen-management"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <PenManagementPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+           />
+           <Route
+            path="/weight-tracking"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <WeightTrackingPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+           />
+           <Route
+            path="/breeding-management"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <BreedingManagementPage />
+                </Layout>
               </ProtectedRoute>
             }
            />

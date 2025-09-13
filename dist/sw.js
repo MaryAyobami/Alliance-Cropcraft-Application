@@ -1,4 +1,4 @@
-const CACHE_NAME = 'alliance-cropcraft-v1'
+const CACHE_NAME = 'livestock-dev-v1'
 
 // Install event - minimal caching for development
 self.addEventListener('install', event => {
@@ -84,6 +84,6 @@ self.addEventListener('push', event => {
   const data = event.data.json()
   self.registration.showNotification(data.title, {
     body: data.body,
-    icon: data.icon || './ms-icon-150x150.png'
+    icon: data.icon || './android-icon-192x192.png'
   })
 })

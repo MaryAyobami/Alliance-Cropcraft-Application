@@ -124,4 +124,107 @@ export const externalUsersAPI = {
 export const subscribePush = (subscription) =>
   api.post("/notifications/subscribe", subscription)
 
+// ============================================================================
+// ENHANCED API ENDPOINTS FOR ALLIANCE CROPCRAFT SIMPLIFIED SPEC
+// ============================================================================
+
+// Pen Management API
+export const penAPI = {
+  getPens: () => api.get("/pens"),
+  getPenById: (id) => api.get(`/pens/${id}`),
+  createPen: (penData) => api.post("/pens", penData),
+  updatePen: (id, penData) => api.put(`/pens/${id}`, penData),
+  deletePen: (id) => api.delete(`/pens/${id}`),
+  getPenAssignments: () => api.get("/pens/assignments"),
+  createPenAssignment: (assignmentData) => api.post("/pens/assignments", assignmentData),
+  updatePenAssignment: (id, assignmentData) => api.put(`/pens/assignments/${id}`, assignmentData),
+  getMyAssignments: () => api.get("/pens/my-assignments"),
+}
+
+// Weight Records API
+export const weightAPI = {
+  getWeightRecords: (animalId) => api.get(`/weight-records${animalId ? `?animal_id=${animalId}` : ''}`),
+  getAnimalWeightHistory: (animalId) => api.get(`/weight-records/animal/${animalId}`),
+  createWeightRecord: (weightData) => api.post("/weight-records", weightData),
+  updateWeightRecord: (id, weightData) => api.put(`/weight-records/${id}`, weightData),
+  deleteWeightRecord: (id) => api.delete(`/weight-records/${id}`),
+  getWeightTrends: (params) => api.get("/weight-records/trends", { params }),
+  getWeightAlerts: () => api.get("/weight-records/alerts"),
+}
+
+// Breeding Management API
+export const breedingAPI = {
+  getBreedingEvents: (params) => api.get("/breeding/events", { params }),
+  createBreedingEvent: (eventData) => api.post("/breeding/events", eventData),
+  getPregnancyChecks: (params) => api.get("/breeding/pregnancy-checks", { params }),
+  createPregnancyCheck: (checkData) => api.post("/breeding/pregnancy-checks", checkData),
+  getBirths: (params) => api.get("/breeding/births", { params }),
+  createBirth: (birthData) => api.post("/breeding/births", birthData),
+  getBreedingStats: (params) => api.get("/breeding/stats", { params }),
+  getDueDates: (params) => api.get("/breeding/due-dates", { params }),
+  getPerformance: (params) => api.get("/breeding/performance", { params }),
+}
+
+// Enhanced Health Management API
+export const healthAPI = {
+  getVaccinations: (params) => api.get("/health/vaccinations", { params }),
+  createVaccination: (vaccinationData) => api.post("/health/vaccinations", vaccinationData),
+  getTreatments: (params) => api.get("/health/treatments", { params }),
+  createTreatment: (treatmentData) => api.post("/health/treatments", treatmentData),
+  getMortalities: (params) => api.get("/health/mortalities", { params }),
+  createMortality: (mortalityData) => api.post("/health/mortalities", mortalityData),
+  getHealthSummary: (animalId) => api.get(`/health/summary${animalId ? `/${animalId}` : ''}`),
+  getVaccinationsDue: (params) => api.get("/health/vaccinations/due", { params }),
+  getHealthStats: (params) => api.get("/health/stats", { params }),
+}
+
+// Feed Management API
+export const feedAPI = {
+  getRations: (params) => api.get("/feed/rations", { params }),
+  createRation: (rationData) => api.post("/feed/rations", rationData),
+  updateRation: (id, rationData) => api.put(`/feed/rations/${id}`, rationData),
+  getFeedInventory: (params) => api.get("/feed/inventory", { params }),
+  updateInventory: (id, inventoryData) => api.put(`/feed/inventory/${id}`, inventoryData),
+  getFeedLogs: (params) => api.get("/feed/logs", { params }),
+  createFeedLog: (feedLogData) => api.post("/feed/logs", feedLogData),
+  updateFeedLog: (id, feedLogData) => api.put(`/feed/logs/${id}`, feedLogData),
+  getRequirements: (params) => api.get("/feed/requirements", { params }),
+  getEfficiency: (params) => api.get("/feed/efficiency", { params }),
+  getPendingApprovals: () => api.get("/feed/pending-approvals"),
+}
+
+// Investor Management API
+export const investorAPI = {
+  getInvestors: () => api.get("/investors"),
+  getInvestorById: (id) => api.get(`/investors/${id}`),
+  createInvestor: (investorData) => api.post("/investors", investorData),
+  updateInvestor: (id, investorData) => api.put(`/investors/${id}`, investorData),
+  getInvestorAllocations: (params) => api.get("/investors/allocations", { params }),
+  createAllocation: (allocationData) => api.post("/investors/allocations", allocationData),
+  getInvestorDashboard: (investorId) => api.get(`/investors/${investorId}/dashboard`),
+  getInvestorKPIs: (investorId, params) => api.get(`/investors/${investorId}/kpis`, { params }),
+  getMyDashboard: () => api.get("/investors/my/dashboard"),
+}
+
+// Enhanced Notifications API
+export const notificationsAPI = {
+  getNotifications: (params) => api.get("/notifications", { params }),
+  markAsRead: (id) => api.put(`/notifications/${id}/read`),
+  createNotification: (notificationData) => api.post("/notifications", notificationData),
+  deleteNotification: (id) => api.delete(`/notifications/${id}`),
+  getStats: () => api.get("/notifications/stats"),
+  markAllRead: () => api.put("/notifications/mark-all-read"),
+}
+
+// Enhanced Reports API
+export const enhancedReportsAPI = {
+  getSupervisorReports: (supervisorId, params) => api.get(`/reports/supervisor/${supervisorId}`, { params }),
+  getInvestorReports: (investorId, params) => api.get(`/reports/investor/${investorId}`, { params }),
+  getHealthCoverageReport: (params) => api.get("/reports/health-coverage", { params }),
+  getMortalityReport: (params) => api.get("/reports/mortality", { params }),
+  getBreedingReport: (params) => api.get("/reports/breeding", { params }),
+  getFeedEfficiencyReport: (params) => api.get("/reports/feed-efficiency", { params }),
+  exportReport: (reportType, params) => api.get(`/reports/export/${reportType}`, { params, responseType: "blob" }),
+}
+
 export default api
